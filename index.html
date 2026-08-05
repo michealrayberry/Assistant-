@@ -15,7 +15,9 @@
     --accent: #e0524d;
     --accent-soft: rgba(224, 82, 77, 0.15);
     --green: #3ecf8e;
+    --green-soft: rgba(62, 207, 142, 0.12);
     --blue: #5b8def;
+    --amber: #e8b34b;
     --radius: 14px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,126 +27,156 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 80px; }
 
-  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .logo {
-    width: 40px; height: 40px; border-radius: 12px;
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
     background: linear-gradient(135deg, var(--accent), #b03a8c);
     display: flex; align-items: center; justify-content: center; font-size: 20px;
   }
   header h1 { font-size: 20px; font-weight: 700; }
   header p { font-size: 13px; color: var(--muted); }
 
+  nav.tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  nav.tabs button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+    padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  nav.tabs button.active { background: var(--panel-2); color: var(--text); border-color: var(--muted); }
+
   .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
   }
+  .card h2 { font-size: 16px; margin-bottom: 12px; }
+  .card h3 { font-size: 14px; margin: 14px 0 8px; }
+  .hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+  .spacer { height: 10px; }
 
-  /* ---- Recorder ---- */
-  .rec-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .timer { font-variant-numeric: tabular-nums; font-size: 34px; font-weight: 700; letter-spacing: 1px; }
-  .timer.recording { color: var(--accent); }
-  .status-pill {
-    font-size: 12px; padding: 4px 10px; border-radius: 999px;
-    background: var(--panel-2); color: var(--muted); border: 1px solid var(--border);
-  }
-  .status-pill.live { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-  canvas#wave { width: 100%; height: 72px; display: block; margin: 16px 0; border-radius: 10px; background: var(--panel-2); }
-
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  button {
+  button.btn {
     font-family: inherit; font-size: 14px; font-weight: 600;
     border: 1px solid var(--border); border-radius: 10px;
     background: var(--panel-2); color: var(--text);
     padding: 10px 18px; cursor: pointer; transition: all .15s;
     display: inline-flex; align-items: center; gap: 8px;
   }
-  button:hover:not(:disabled) { border-color: var(--muted); }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover:not(:disabled) { filter: brightness(1.1); }
-  button.small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
-  button.danger:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-  .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
-  .recording .rec-dot, .rec-dot.blink { animation: blink 1.2s infinite; }
-  @keyframes blink { 50% { opacity: .25; } }
+  button.btn:hover:not(:disabled) { border-color: var(--muted); }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
+  button.btn.green { background: var(--green); border-color: var(--green); color: #06281a; }
+  button.btn.small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  button.btn.danger:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-  label.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
-  label.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
-
-  /* ---- Transcript ---- */
-  .transcript {
-    margin-top: 14px; padding: 12px 14px; border-radius: 10px;
-    background: var(--panel-2); border: 1px solid var(--border);
-    font-size: 14px; line-height: 1.6; color: var(--text);
-    max-height: 160px; overflow-y: auto; display: none; white-space: pre-wrap;
+  select, input[type="text"], input[type="number"], textarea {
+    font-family: inherit; font-size: 14px; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 12px; width: 100%;
   }
-  .transcript .interim { color: var(--muted); font-style: italic; }
-  .transcript-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-top: 14px; display: none; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--muted); }
+  label.fld { display: block; font-size: 12.5px; color: var(--muted); margin: 12px 0 5px; font-weight: 600; }
+  label.chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin: 8px 0; cursor: pointer; }
+  label.chk input { accent-color: var(--accent); width: 16px; height: 16px; flex: none; }
+  label.chk input[type=number] { width: 70px; padding: 4px 8px; }
 
-  /* ---- Dropzone ---- */
+  .req-detail { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 12px 0; font-size: 13.5px; line-height: 1.6; }
+  .req-detail ol { margin: 6px 0 6px 20px; }
+  .kv { color: var(--muted); }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+
+  /* session active */
+  .sess-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .timer { font-variant-numeric: tabular-nums; font-size: 34px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--border);
+  }
+  .pill.ok { color: var(--green); border-color: rgba(62,207,142,.4); }
+  .pill.bad { color: var(--accent); border-color: rgba(224,82,77,.5); background: var(--accent-soft); }
+  .pill.rec { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .45; } }
+
+  video#preview { width: 100%; max-height: 300px; border-radius: 12px; background: #000; margin: 14px 0 6px; transform: scaleX(-1); }
+  .meter-wrap { height: 8px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--border); overflow: hidden; margin: 12px 0; }
+  .meter { height: 100%; width: 0%; background: var(--green); transition: width .12s; }
+
+  .steps { margin-top: 8px; }
+  .step {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin-bottom: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; font-size: 14px;
+  }
+  .step.done { opacity: .55; }
+  .step.current { border-color: var(--amber); }
+  .step .num { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--panel); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .step.done .num { background: var(--green); border-color: var(--green); color: #06281a; }
+  .step .txt { flex: 1; line-height: 1.5; padding-top: 1px; }
+  .step button { flex: none; }
+
+  /* verdict */
+  .verdict { border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 14px; }
+  .verdict.valid { background: var(--green-soft); border: 1px solid rgba(62,207,142,.4); }
+  .verdict.invalid { background: var(--accent-soft); border: 1px solid rgba(224,82,77,.5); }
+  .verdict .big { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+  .verdict.valid .big { color: var(--green); }
+  .verdict.invalid .big { color: var(--accent); }
+  .verdict ul { text-align: left; margin: 10px auto 0; max-width: 480px; font-size: 13.5px; color: var(--text); padding-left: 20px; }
+  .seal {
+    text-align: center; margin: 14px 0; padding: 14px; border-radius: 12px;
+    background: var(--panel-2); border: 1px dashed var(--muted);
+  }
+  .seal .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 26px; font-weight: 700; letter-spacing: 3px; }
+  .seal .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+
+  /* verify */
   .dropzone {
     border: 2px dashed var(--border); border-radius: var(--radius);
     padding: 28px 20px; text-align: center; color: var(--muted);
-    cursor: pointer; transition: all .15s; margin-bottom: 16px;
-    font-size: 14px;
+    cursor: pointer; transition: all .15s; margin-bottom: 16px; font-size: 14px;
   }
   .dropzone:hover, .dropzone.dragover { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
   .dropzone strong { color: var(--text); }
+  .check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .check:last-child { border-bottom: none; }
+  .check .ico { flex: none; width: 20px; text-align: center; }
+  .check.pass .ico { color: var(--green); }
+  .check.fail .ico { color: var(--accent); }
+  .check .detail { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  table.events { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  table.events th, table.events td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.events th { color: var(--muted); font-weight: 600; }
+  .ev-violation { color: var(--accent); font-weight: 600; }
+  .snaps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .snaps img { width: 110px; border-radius: 8px; border: 1px solid var(--border); }
+  audio, video.playback { width: 100%; margin-top: 10px; border-radius: 10px; }
 
-  /* ---- Library ---- */
-  .lib-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-  .lib-head h2 { font-size: 16px; }
-  .lib-head .count { color: var(--muted); font-weight: 400; }
-  input[type="search"] {
-    font-family: inherit; font-size: 14px; color: var(--text);
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
-    padding: 8px 14px; width: 220px; max-width: 100%;
-  }
-  input[type="search"]:focus { outline: none; border-color: var(--muted); }
-
+  /* lists */
   .item {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 16px; margin-bottom: 10px;
+    padding: 13px 15px; margin-bottom: 10px;
   }
-  .item-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .item-name {
-    font-weight: 600; font-size: 15px; flex: 1; min-width: 160px;
-    background: transparent; border: 1px solid transparent; border-radius: 6px;
-    color: var(--text); font-family: inherit; padding: 4px 6px; margin-left: -6px;
-  }
-  .item-name:hover { border-color: var(--border); }
-  .item-name:focus { outline: none; border-color: var(--muted); background: var(--panel); }
-  .item-meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .badge {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
-    padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
-  }
-  .badge.rec { color: var(--accent); border-color: rgba(224,82,77,.4); }
-  .badge.upload { color: var(--blue); border-color: rgba(91,141,239,.4); }
-  audio { width: 100%; margin-top: 10px; height: 40px; }
-  .item-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-  .item-notes {
-    width: 100%; margin-top: 10px; font-family: inherit; font-size: 13px;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-    color: var(--text); padding: 8px 10px; resize: vertical; min-height: 34px; display: none;
-  }
-  .item-notes:focus { outline: none; border-color: var(--muted); }
-  .item-transcript { margin-top: 10px; font-size: 13px; color: var(--muted); line-height: 1.5; display: none; white-space: pre-wrap; border-left: 3px solid var(--border); padding-left: 10px; }
+  .item .toprow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .item .name { font-weight: 600; font-size: 14.5px; flex: 1; min-width: 140px; }
+  .item .meta { font-size: 12px; color: var(--muted); }
+  .badge { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); flex: none; }
+  .badge.valid { color: var(--green); border-color: rgba(62,207,142,.4); }
+  .badge.invalid { color: var(--accent); border-color: rgba(224,82,77,.5); }
+  .item .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
-  .empty { text-align: center; color: var(--muted); padding: 32px 16px; font-size: 14px; }
+  .empty { text-align: center; color: var(--muted); padding: 28px 16px; font-size: 14px; }
+  .notice { background: var(--accent-soft); border: 1px solid rgba(224,82,77,.4); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
     padding: 10px 18px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none;
-    box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10; max-width: 90vw; text-align: center;
   }
   .toast.show { opacity: 1; }
-  .footer-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.6; }
+  .footer-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.7; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -153,50 +185,145 @@
     <div class="logo">🎙️</div>
     <div>
       <h1>Recording Assistant</h1>
-      <p>Record, upload, and organize audio — everything stays on your device.</p>
+      <p>Guided, continuous, tamper-evident evidence capture — verified locally, delivered to your Accountability Partner.</p>
     </div>
   </header>
 
-  <!-- Recorder -->
-  <div class="card" id="recorderCard">
-    <div class="rec-top">
-      <div class="timer" id="timer">00:00</div>
-      <span class="status-pill" id="statusPill">Ready</span>
-    </div>
-    <canvas id="wave"></canvas>
-    <div class="controls">
-      <button class="primary" id="btnRecord"><span class="rec-dot"></span>Record</button>
-      <button id="btnPause" disabled>Pause</button>
-      <button id="btnStop" disabled>Stop &amp; Save</button>
-      <label class="toggle" id="transcribeToggleWrap" style="display:none">
-        <input type="checkbox" id="transcribeToggle" checked>
-        Live transcription
-      </label>
-    </div>
-    <div class="transcript-label" id="transcriptLabel">Live transcript</div>
-    <div class="transcript" id="transcript"></div>
+  <nav class="tabs">
+    <button data-tab="session" class="active">Record Session</button>
+    <button data-tab="verify">Verify Packet</button>
+    <button data-tab="requirements">Requirements</button>
+    <button data-tab="history">History</button>
+  </nav>
+
+  <div id="interruptNotice" class="notice hidden">
+    ⚠️ A previous session was interrupted (page closed or reloaded mid-recording). That session is <strong>invalid</strong> and its data was lost — it must be redone.
   </div>
 
-  <!-- Upload -->
-  <div class="dropzone" id="dropzone">
-    <strong>Upload local audio</strong> — drag &amp; drop files here, or click to browse<br>
-    <span style="font-size:12px">MP3 · WAV · M4A · OGG · WEBM · FLAC and more</span>
-    <input type="file" id="fileInput" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac,.aac" multiple hidden>
-  </div>
-
-  <!-- Library -->
-  <div class="card">
-    <div class="lib-head">
-      <h2>Library <span class="count" id="libCount"></span></h2>
-      <input type="search" id="search" placeholder="Search recordings…">
+  <!-- ================= SESSION TAB ================= -->
+  <section id="tab-session">
+    <div class="card" id="setupView">
+      <h2>Start a session</h2>
+      <label class="fld">Requirement</label>
+      <select id="reqSelect"></select>
+      <div class="req-detail" id="reqDetail"></div>
+      <div class="row">
+        <button class="btn primary" id="btnStart">● Start recording session</button>
+        <button class="btn" id="btnImportReq2">Import requirement…</button>
+      </div>
+      <div class="spacer"></div>
+      <p class="hint">Once started, recording is continuous — there is no pause. Leaving the app, covering the camera, disconnecting the microphone, or stopping early will invalidate the session (the rules applied are shown above). When you finish, a sealed verification packet is produced for your Accountability Partner.</p>
     </div>
-    <div id="library"></div>
-    <div class="empty" id="emptyState">No recordings yet. Hit <strong>Record</strong> or upload a file to get started.</div>
-  </div>
+
+    <div class="card hidden" id="activeView">
+      <div class="sess-top">
+        <div class="timer" id="timer">00:00</div>
+        <div class="pills" id="pills">
+          <span class="pill rec" id="pillRec">● REC</span>
+          <span class="pill ok" id="pillScreen">Screen: visible</span>
+          <span class="pill ok hidden" id="pillCam">Camera: OK</span>
+          <span class="pill ok" id="pillMic">Mic: OK</span>
+        </div>
+      </div>
+      <div class="hint" id="minDurHint" style="margin-top:6px"></div>
+      <video id="preview" class="hidden" muted playsinline></video>
+      <div class="meter-wrap"><div class="meter" id="meter"></div></div>
+      <h3>Follow each step, then mark it done</h3>
+      <div class="steps" id="stepsList"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn green" id="btnComplete">Complete session</button>
+        <button class="btn danger" id="btnAbort">Abort</button>
+      </div>
+    </div>
+
+    <div class="card hidden" id="packagingView">
+      <h2>Sealing packet…</h2>
+      <p class="hint" id="packagingStatus">Computing integrity hashes and building the verification packet. Keep this page open.</p>
+    </div>
+
+    <div class="card hidden" id="resultView">
+      <div class="verdict" id="verdictBox"></div>
+      <div class="seal">
+        <div class="lbl">Seal code — send this to your Accountability Partner NOW via a separate channel (text / call)</div>
+        <div class="code" id="sealCode"></div>
+      </div>
+      <p class="hint">Then deliver the packet file itself (download or share below — e.g. email, drive, messaging). The partner opens this same app, goes to <strong>Verify Packet</strong>, and drops the file in. The seal code they received directly from you at completion time is what proves the packet wasn't rebuilt afterward.</p>
+      <div class="spacer"></div>
+      <div class="row">
+        <button class="btn primary" id="btnDownloadPacket">⬇ Download packet</button>
+        <button class="btn hidden" id="btnSharePacket">Share…</button>
+        <button class="btn" id="btnCopySeal">Copy seal code</button>
+        <button class="btn" id="btnNewSession">New session</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VERIFY TAB ================= -->
+  <section id="tab-verify" class="hidden">
+    <div class="card">
+      <h2>Verify a packet (Accountability Partner)</h2>
+      <p class="hint">Drop the participant's <span class="mono">.zip</span> verification packet below. Every hash is recomputed from the raw media bytes, the event log is re-checked against the requirement's rules, and the verdict is re-derived independently — the packet's own claims are never trusted.</p>
+      <div class="spacer"></div>
+      <div class="dropzone" id="verifyDrop">
+        <strong>Drop packet here</strong> or click to browse
+        <input type="file" id="verifyFile" accept=".zip,application/zip" hidden>
+      </div>
+      <label class="fld">Seal code received from the participant (optional but recommended)</label>
+      <input type="text" id="sealInput" placeholder="e.g. A3F2-9C41-77D0" autocomplete="off">
+    </div>
+    <div id="verifyReport"></div>
+  </section>
+
+  <!-- ================= REQUIREMENTS TAB ================= -->
+  <section id="tab-requirements" class="hidden">
+    <div class="card">
+      <h2>Requirements</h2>
+      <p class="hint">A requirement defines what a valid session looks like: the instructions, the minimum duration, and the rules that invalidate a session. The Accountability Partner can author one here, <strong>export</strong> it, and send the file to the participant to <strong>import</strong> — its fingerprint appears in every packet so the partner can confirm the right requirement was followed.</p>
+      <div class="spacer"></div>
+      <div class="row">
+        <button class="btn" id="btnImportReq">Import requirement…</button>
+        <input type="file" id="reqFileInput" accept=".json,application/json" hidden>
+      </div>
+      <div id="reqList" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h2>Create a requirement</h2>
+      <label class="fld">Title</label>
+      <input type="text" id="nrTitle" placeholder="e.g. Daily medication check-in">
+      <label class="fld">Description (shown to the participant before starting)</label>
+      <input type="text" id="nrDesc" placeholder="What this session is for">
+      <label class="fld">Media</label>
+      <select id="nrMedia">
+        <option value="video">Video + audio</option>
+        <option value="audio">Audio only</option>
+      </select>
+      <label class="fld">Minimum duration (minutes)</label>
+      <input type="number" id="nrMin" value="1" min="0.2" step="0.5">
+      <label class="fld">Steps — one per line, in order</label>
+      <textarea id="nrSteps" rows="4" placeholder="State your name and today's date&#10;Show the item clearly on camera&#10;Complete the required action on camera"></textarea>
+      <h3>Validity rules</h3>
+      <label class="chk"><input type="checkbox" id="nrRuleHide" checked> Invalidate if the app is hidden / backgrounded for more than <input type="number" id="nrHideSec" value="15" min="3"> seconds</label>
+      <label class="chk"><input type="checkbox" id="nrRuleDark" checked> Invalidate if the camera is dark / obscured for more than <input type="number" id="nrDarkSec" value="10" min="3"> seconds (video only)</label>
+      <label class="chk"><input type="checkbox" id="nrRuleSilence"> Invalidate if continuous silence exceeds <input type="number" id="nrSilenceSec" value="60" min="10"> seconds</label>
+      <label class="chk"><input type="checkbox" id="nrRuleSteps" checked> Invalidate unless every step is marked done</label>
+      <div class="spacer"></div>
+      <button class="btn primary" id="btnSaveReq">Save requirement</button>
+    </div>
+  </section>
+
+  <!-- ================= HISTORY TAB ================= -->
+  <section id="tab-history" class="hidden">
+    <div class="card">
+      <h2>Past sessions</h2>
+      <p class="hint">Sealed packets stored on this device. Re-download any packet to deliver it again. Invalid (rejected) sessions are kept as a record of the attempt.</p>
+      <div id="historyList" style="margin-top:14px"></div>
+      <div class="empty hidden" id="historyEmpty">No sessions yet.</div>
+    </div>
+  </section>
 
   <div class="footer-note">
-    All audio is stored locally in your browser (IndexedDB) — nothing is uploaded to any server.<br>
-    Use each item's <strong>Download</strong> button to save a copy to disk.
+    Everything runs and stays on this device — no server, no account. Integrity comes from SHA-256 hash chains sealed at capture time,<br>
+    cross-checked by the seal code the participant sends through a separate channel at the moment the session ends.
   </div>
 </div>
 
@@ -205,53 +332,9 @@
 <script>
 'use strict';
 
-/* =============== IndexedDB storage =============== */
-const DB_NAME = 'recording-assistant';
-const STORE = 'recordings';
-let db;
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const d = req.result;
-      if (!d.objectStoreNames.contains(STORE)) {
-        d.createObjectStore(STORE, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function dbPut(item) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(item);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-function dbGetAll() {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function dbDelete(id) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-/* =============== Helpers =============== */
+/* ======================================================================
+   1. Utilities
+====================================================================== */
 const $ = id => document.getElementById(id);
 const toastEl = $('toast');
 let toastTimer;
@@ -259,519 +342,1238 @@ function toast(msg) {
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3000);
 }
 
 function fmtTime(sec) {
-  sec = Math.floor(sec);
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+function fmtDate(ts) { return new Date(ts).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }); }
+function uid() { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); }
+function esc(s) { const d = document.createElement('span'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
-function fmtSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / 1048576).toFixed(1) + ' MB';
+function stableStringify(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
 }
 
-function fmtDate(ts) {
-  return new Date(ts).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+function hex(u8) { return Array.from(u8, b => b.toString(16).padStart(2, '0')).join(''); }
+function concatU8(arrs) {
+  const total = arrs.reduce((n, a) => n + a.length, 0);
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const a of arrs) { out.set(a, o); o += a.length; }
+  return out;
+}
+const utf8 = s => new TextEncoder().encode(s);
+
+/* ======================================================================
+   2. SHA-256 (WebCrypto with pure-JS fallback for odd contexts)
+====================================================================== */
+const SHA_K = [
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+];
+function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+function sha256Fallback(data) {
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const len = data.length;
+  const padded = new Uint8Array((((len + 8) >> 6) << 6) + 64);
+  padded.set(data);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  dv.setUint32(padded.length - 8, Math.floor(len / 0x20000000));
+  dv.setUint32(padded.length - 4, (len << 3) >>> 0);
+  const w = new Uint32Array(64);
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+    }
+    let [a,b,c,d,e,f,g,h] = H;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + SHA_K[i] + w[i]) >>> 0;
+      const S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) >>> 0;
+      h=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+    }
+    const r = [a,b,c,d,e,f,g,h];
+    H = H.map((x, i) => (x + r[i]) >>> 0);
+  }
+  const out = new Uint8Array(32);
+  const odv = new DataView(out.buffer);
+  H.forEach((v, i) => odv.setUint32(i * 4, v));
+  return out;
+}
+async function sha256(u8) {
+  if (crypto && crypto.subtle) {
+    try {
+      const d = await crypto.subtle.digest('SHA-256', u8);
+      return new Uint8Array(d);
+    } catch (e) { /* fall through */ }
+  }
+  return sha256Fallback(u8);
+}
+const sha256Hex = async u8 => hex(await sha256(u8));
+
+/* ======================================================================
+   3. CRC32 + minimal ZIP (store-only) writer & reader
+====================================================================== */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(u8) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
 }
 
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function buildZip(files) { // files: [{name, data:Uint8Array}]
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const dosDate = (((now.getFullYear() - 1980) & 0x7f) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const nameB = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const lh = new Uint8Array(30 + nameB.length);
+    const dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0x0800, true);           // UTF-8 names
+    dv.setUint16(8, 0, true);                // method: store
+    dv.setUint16(10, dosTime, true);
+    dv.setUint16(12, dosDate, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, f.data.length, true);
+    dv.setUint32(22, f.data.length, true);
+    dv.setUint16(26, nameB.length, true);
+    dv.setUint16(28, 0, true);
+    lh.set(nameB, 30);
+    parts.push(lh, f.data);
+    central.push({ nameB, crc, size: f.data.length, offset, dosTime, dosDate });
+    offset += lh.length + f.data.length;
+  }
+  const cdParts = [];
+  let cdSize = 0;
+  for (const c of central) {
+    const e = new Uint8Array(46 + c.nameB.length);
+    const dv = new DataView(e.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0x0800, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, c.dosTime, true);
+    dv.setUint16(14, c.dosDate, true);
+    dv.setUint32(16, c.crc, true);
+    dv.setUint32(20, c.size, true);
+    dv.setUint32(24, c.size, true);
+    dv.setUint16(28, c.nameB.length, true);
+    dv.setUint32(42, c.offset, true);
+    e.set(c.nameB, 46);
+    cdParts.push(e);
+    cdSize += e.length;
+  }
+  const eocd = new Uint8Array(22);
+  const dv = new DataView(eocd.buffer);
+  dv.setUint32(0, 0x06054b50, true);
+  dv.setUint16(8, central.length, true);
+  dv.setUint16(10, central.length, true);
+  dv.setUint32(12, cdSize, true);
+  dv.setUint32(16, offset, true);
+  return new Blob([...parts, ...cdParts, eocd], { type: 'application/zip' });
 }
 
+function parseZip(buf) {
+  const u8 = new Uint8Array(buf);
+  const dv = new DataView(buf);
+  let eocd = -1;
+  const lo = Math.max(0, u8.length - 22 - 65536);
+  for (let i = u8.length - 22; i >= lo; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Not a valid packet — zip end record not found.');
+  const count = dv.getUint16(eocd + 10, true);
+  let ptr = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const files = {};
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(ptr, true) !== 0x02014b50) throw new Error('Corrupt packet — central directory damaged.');
+    const method = dv.getUint16(ptr + 10, true);
+    const csize = dv.getUint32(ptr + 20, true);
+    const nlen = dv.getUint16(ptr + 28, true);
+    const elen = dv.getUint16(ptr + 30, true);
+    const clen = dv.getUint16(ptr + 32, true);
+    const lho = dv.getUint32(ptr + 42, true);
+    const name = dec.decode(u8.subarray(ptr + 46, ptr + 46 + nlen));
+    if (method !== 0) throw new Error('Unsupported packet — compressed entries are not produced by this app.');
+    const lnlen = dv.getUint16(lho + 26, true);
+    const lelen = dv.getUint16(lho + 28, true);
+    const start = lho + 30 + lnlen + lelen;
+    files[name] = u8.subarray(start, start + csize);
+    ptr += 46 + nlen + elen + clen;
+  }
+  return files;
+}
+
+/* ======================================================================
+   4. IndexedDB
+====================================================================== */
+const DB_NAME = 'recording-assistant-v2';
+let db;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains('requirements')) d.createObjectStore('requirements', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('packets')) d.createObjectStore('packets', { keyPath: 'id' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+const idb = {
+  put: (store, item) => new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(item);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  }),
+  all: store => new Promise((res, rej) => {
+    const r = db.transaction(store, 'readonly').objectStore(store).getAll();
+    r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error);
+  }),
+  del: (store, id) => new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  })
+};
+
+/* ======================================================================
+   5. Requirements
+====================================================================== */
+const SAMPLE_REQ = {
+  id: 'sample-daily-checkin',
+  version: 1,
+  title: 'Sample: Daily video check-in',
+  description: 'A one-take, on-camera check-in confirming the required action was completed today.',
+  media: 'video',
+  minDurationSec: 60,
+  steps: [
+    "State your full name and today's date out loud",
+    'Slowly pan the camera around your surroundings',
+    'Complete the required action clearly on camera',
+    'Confirm out loud that the session was done in one continuous take'
+  ],
+  rules: {
+    invalidateOnHide: true, maxHiddenSec: 15,
+    invalidateOnDark: true, darkMaxSec: 10,
+    invalidateOnSilence: false, maxSilenceSec: 60,
+    requireAllSteps: true
+  },
+  createdAt: '2026-01-01T00:00:00.000Z'
+};
+
+const requirementHash = req => sha256Hex(utf8(stableStringify(req)));
+
+function validateRequirement(r) {
+  return r && typeof r === 'object' && typeof r.title === 'string' &&
+    (r.media === 'video' || r.media === 'audio') &&
+    typeof r.minDurationSec === 'number' && Array.isArray(r.steps) &&
+    r.rules && typeof r.rules === 'object';
+}
+
+async function getRequirements() {
+  const list = await idb.all('requirements');
+  list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return list;
+}
+
+async function seedRequirements() {
+  const list = await idb.all('requirements');
+  if (!list.length) await idb.put('requirements', SAMPLE_REQ);
+}
+
+function describeRules(r) {
+  const out = [];
+  out.push(`Minimum duration: ${fmtTime(r.minDurationSec)}`);
+  out.push('Continuous recording — no pause allowed');
+  if (r.rules.invalidateOnHide) out.push(`App hidden > ${r.rules.maxHiddenSec}s → invalid`);
+  if (r.media === 'video' && r.rules.invalidateOnDark) out.push(`Camera obscured > ${r.rules.darkMaxSec}s → invalid`);
+  if (r.rules.invalidateOnSilence) out.push(`Silence > ${r.rules.maxSilenceSec}s → invalid`);
+  if (r.rules.requireAllSteps) out.push('All steps must be marked done');
+  out.push('Mic/camera disconnect → invalid · Early stop or abort → invalid');
+  return out;
+}
+
+async function renderReqSelect() {
+  const list = await getRequirements();
+  const sel = $('reqSelect');
+  sel.innerHTML = '';
+  for (const r of list) {
+    const o = document.createElement('option');
+    o.value = r.id;
+    o.textContent = `${r.title} (${r.media === 'video' ? 'video' : 'audio'}, min ${fmtTime(r.minDurationSec)})`;
+    sel.appendChild(o);
+  }
+  await renderReqDetail();
+}
+
+async function currentRequirement() {
+  const list = await getRequirements();
+  return list.find(r => r.id === $('reqSelect').value) || list[0];
+}
+
+async function renderReqDetail() {
+  const r = await currentRequirement();
+  const box = $('reqDetail');
+  if (!r) { box.innerHTML = '<span class="kv">No requirements — create or import one in the Requirements tab.</span>'; return; }
+  const h = await requirementHash(r);
+  box.innerHTML =
+    `<strong>${esc(r.title)}</strong><br><span class="kv">${esc(r.description || '')}</span>` +
+    `<ol>${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` +
+    `<span class="kv">${describeRules(r).map(esc).join(' · ')}</span><br>` +
+    `<span class="kv mono">Requirement fingerprint: ${h.slice(0, 16)}…</span>`;
+}
+
+async function renderReqList() {
+  const list = await getRequirements();
+  const box = $('reqList');
+  box.innerHTML = '';
+  for (const r of list) {
+    const el = document.createElement('div');
+    el.className = 'item';
+    const hash = await requirementHash(r);
+    el.innerHTML =
+      `<div class="toprow"><span class="badge">${r.media}</span><span class="name">${esc(r.title)}</span>` +
+      `<span class="meta">min ${fmtTime(r.minDurationSec)} · ${r.steps.length} steps</span></div>` +
+      `<div class="meta mono" style="margin-top:6px">fingerprint ${hash.slice(0, 24)}…</div>`;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const btnExp = document.createElement('button');
+    btnExp.className = 'btn small';
+    btnExp.textContent = 'Export';
+    btnExp.onclick = () => {
+      downloadBlob(new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' }),
+        'requirement_' + r.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.json');
+    };
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn small danger';
+    btnDel.textContent = 'Delete';
+    btnDel.onclick = async () => {
+      if (!confirm(`Delete requirement "${r.title}"?`)) return;
+      await idb.del('requirements', r.id);
+      await renderReqList(); await renderReqSelect();
+    };
+    actions.append(btnExp, btnDel);
+    el.appendChild(actions);
+    box.appendChild(el);
+  }
+  if (!list.length) box.innerHTML = '<div class="empty">No requirements yet.</div>';
+}
+
+async function importRequirementFile(file) {
+  try {
+    const r = JSON.parse(await file.text());
+    if (!validateRequirement(r)) throw new Error('bad shape');
+    if (!r.id) r.id = uid();
+    await idb.put('requirements', r);
+    await renderReqList(); await renderReqSelect();
+    $('reqSelect').value = r.id;
+    await renderReqDetail();
+    toast(`Imported requirement "${r.title}".`);
+  } catch (e) {
+    toast('Not a valid requirement file.');
+  }
+}
+
+async function saveNewRequirement() {
+  const title = $('nrTitle').value.trim();
+  const steps = $('nrSteps').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!title) { toast('Give the requirement a title.'); return; }
+  if (!steps.length) { toast('Add at least one step.'); return; }
+  const req = {
+    id: uid(),
+    version: 1,
+    title,
+    description: $('nrDesc').value.trim(),
+    media: $('nrMedia').value,
+    minDurationSec: Math.max(10, Math.round(parseFloat($('nrMin').value || '1') * 60)),
+    steps,
+    rules: {
+      invalidateOnHide: $('nrRuleHide').checked,
+      maxHiddenSec: Math.max(3, parseInt($('nrHideSec').value) || 15),
+      invalidateOnDark: $('nrRuleDark').checked,
+      darkMaxSec: Math.max(3, parseInt($('nrDarkSec').value) || 10),
+      invalidateOnSilence: $('nrRuleSilence').checked,
+      maxSilenceSec: Math.max(10, parseInt($('nrSilenceSec').value) || 60),
+      requireAllSteps: $('nrRuleSteps').checked
+    },
+    createdAt: new Date().toISOString()
+  };
+  await idb.put('requirements', req);
+  $('nrTitle').value = ''; $('nrDesc').value = ''; $('nrSteps').value = '';
+  await renderReqList(); await renderReqSelect();
+  toast('Requirement saved.');
+}
+
+/* ======================================================================
+   6. Verdict (shared by session end AND independent re-verification)
+====================================================================== */
+const VIOLATION_TEXT = {
+  screen_hidden: 'App was hidden or backgrounded longer than allowed',
+  camera_obscured: 'Camera was dark or obscured longer than allowed',
+  extended_silence: 'Continuous silence exceeded the allowed limit',
+  track_ended: 'Microphone or camera disconnected during the session',
+  recorder_error: 'The recording engine reported an error mid-session'
+};
+
+function computeVerdict(events, req, durationMs) {
+  const reasons = [];
+  if (events.some(e => e.type === 'session_aborted'))
+    reasons.push('Session was aborted before completion');
+  if (durationMs < req.minDurationSec * 1000)
+    reasons.push(`Recording (${fmtTime(durationMs / 1000)}) is shorter than the required minimum (${fmtTime(req.minDurationSec)})`);
+  const codes = [...new Set(events.filter(e => e.type === 'violation').map(e => e.detail && e.detail.code))];
+  for (const c of codes) reasons.push(VIOLATION_TEXT[c] || ('Rule violation: ' + c));
+  if (req.rules.requireAllSteps) {
+    const acks = events.filter(e => e.type === 'step_ack').length;
+    if (acks < req.steps.length)
+      reasons.push(`Only ${acks} of ${req.steps.length} required steps were marked done`);
+  }
+  return { valid: reasons.length === 0, reasons };
+}
+
+/* ======================================================================
+   7. Session engine
+====================================================================== */
+const ACTIVE_KEY = 'ra_active_session';
+let S = null; // active session state
+
+function logEvent(type, detail) {
+  if (!S) return;
+  S.events.push({
+    t: Math.round(performance.now() - S.startPerf),
+    wall: new Date().toISOString(),
+    type,
+    detail: detail || null
+  });
+}
+function logViolation(code, extra) {
+  if (S.flagged.has(code)) return; // one violation event per condition occurrence type
+  S.flagged.add(code);
+  logEvent('violation', Object.assign({ code }, extra || {}));
+  toast('⚠️ Rule violated — this session will be INVALID: ' + (VIOLATION_TEXT[code] || code));
+}
+
+function pickMime(mode) {
+  const cands = mode === 'video'
+    ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
+    : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  for (const c of cands) if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+  return '';
+}
 function extFor(mime) {
   if (!mime) return 'webm';
+  if (mime.includes('mp4')) return mime.startsWith('video') ? 'mp4' : 'm4a';
   if (mime.includes('ogg')) return 'ogg';
-  if (mime.includes('mp4') || mime.includes('m4a') || mime.includes('aac')) return 'm4a';
-  if (mime.includes('mpeg') || mime.includes('mp3')) return 'mp3';
-  if (mime.includes('wav')) return 'wav';
-  if (mime.includes('flac')) return 'flac';
   return 'webm';
 }
 
-function getBlobDuration(blob) {
-  return new Promise(resolve => {
-    const a = document.createElement('audio');
-    const url = URL.createObjectURL(blob);
-    const done = d => { URL.revokeObjectURL(url); resolve(d); };
-    a.preload = 'metadata';
-    a.onloadedmetadata = () => {
-      if (a.duration === Infinity || isNaN(a.duration)) {
-        // Chrome quirk with MediaRecorder webm blobs: seek far to force real duration
-        a.currentTime = 1e7;
-        a.ontimeupdate = () => { a.ontimeupdate = null; done(a.duration === Infinity ? 0 : a.duration); };
-      } else {
-        done(a.duration);
-      }
-    };
-    a.onerror = () => done(0);
-    a.src = url;
-  });
-}
+async function startSession() {
+  const req = await currentRequirement();
+  if (!req) { toast('Create or import a requirement first.'); return; }
 
-/* =============== Recorder =============== */
-const btnRecord = $('btnRecord');
-const btnPause = $('btnPause');
-const btnStop = $('btnStop');
-const timerEl = $('timer');
-const statusPill = $('statusPill');
-const waveCanvas = $('wave');
-const waveCtx = waveCanvas.getContext('2d');
-
-let mediaRecorder = null;
-let mediaStream = null;
-let audioCtx = null;
-let analyser = null;
-let chunks = [];
-let recStartTime = 0;
-let elapsedBefore = 0;   // accumulated ms across pauses
-let timerInterval = null;
-let animFrame = null;
-
-function pickMime() {
-  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
-  for (const c of candidates) {
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
-  }
-  return '';
-}
-
-async function startRecording() {
+  let stream;
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true }
-    });
-  } catch (err) {
-    toast('Microphone access denied — check browser permissions.');
+    stream = await navigator.mediaDevices.getUserMedia(
+      req.media === 'video'
+        ? { video: { width: { ideal: 640 }, facingMode: 'user' }, audio: { echoCancellation: true, noiseSuppression: true } }
+        : { audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch (e) {
+    toast('Camera/microphone access denied — the session cannot start.');
     return;
   }
 
-  chunks = [];
-  const mime = pickMime();
-  mediaRecorder = new MediaRecorder(mediaStream, mime ? { mimeType: mime } : undefined);
-  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  mediaRecorder.onstop = onRecordingStopped;
-  mediaRecorder.start(1000); // gather data every second so long recordings survive
-
-  // waveform
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const src = audioCtx.createMediaStreamSource(mediaStream);
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  src.connect(analyser);
-  drawWave();
-
-  elapsedBefore = 0;
-  recStartTime = Date.now();
-  timerInterval = setInterval(updateTimer, 200);
-
-  btnRecord.disabled = true;
-  btnPause.disabled = false;
-  btnStop.disabled = false;
-  timerEl.classList.add('recording');
-  statusPill.textContent = 'Recording';
-  statusPill.classList.add('live');
-
-  startTranscription();
-}
-
-function updateTimer() {
-  const ms = elapsedBefore + (recStartTime ? Date.now() - recStartTime : 0);
-  timerEl.textContent = fmtTime(ms / 1000);
-}
-
-function togglePause() {
-  if (!mediaRecorder) return;
-  if (mediaRecorder.state === 'recording') {
-    mediaRecorder.pause();
-    elapsedBefore += Date.now() - recStartTime;
-    recStartTime = 0;
-    btnPause.textContent = 'Resume';
-    statusPill.textContent = 'Paused';
-    statusPill.classList.remove('live');
-    pauseTranscription();
-  } else if (mediaRecorder.state === 'paused') {
-    mediaRecorder.resume();
-    recStartTime = Date.now();
-    btnPause.textContent = 'Pause';
-    statusPill.textContent = 'Recording';
-    statusPill.classList.add('live');
-    resumeTranscription();
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  stopTranscription();
-}
-
-async function onRecordingStopped() {
-  clearInterval(timerInterval);
-  if (recStartTime) elapsedBefore += Date.now() - recStartTime;
-  cancelAnimationFrame(animFrame);
-  if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
-
-  const mime = mediaRecorder.mimeType || 'audio/webm';
-  const blob = new Blob(chunks, { type: mime });
-  chunks = [];
-  mediaRecorder = null;
-  mediaStream = null;
-
-  const durationSec = elapsedBefore / 1000;
-  const now = Date.now();
-  const item = {
-    id: uid(),
-    name: 'Recording ' + new Date(now).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
-    createdAt: now,
-    source: 'recorded',
-    mime,
-    size: blob.size,
-    duration: durationSec,
-    notes: '',
-    transcript: finalTranscript.trim(),
-    blob
+  const id = uid();
+  const mime = pickMime(req.media);
+  S = {
+    id, req, mime,
+    startWall: Date.now(),
+    startPerf: performance.now(),
+    events: [],
+    chunks: [],            // Uint8Array per timeslice
+    chunkSizes: [],
+    chain: await sha256(utf8(id)),  // hash-chain seed = sha256(sessionId)
+    hashQueue: Promise.resolve(),
+    snapshots: [],
+    stream,
+    recorder: null,
+    audioCtx: null,
+    analyser: null,
+    intervals: [],
+    flagged: new Set(),
+    stepsDone: 0,
+    hiddenSince: null,
+    darkSince: null,
+    silentSince: null,
+    snapCount: 0,
+    lastSnapT: 0,
+    finalized: false,
+    aborted: false
   };
+  localStorage.setItem(ACTIVE_KEY, id);
 
-  if (blob.size === 0) {
-    toast('Recording was empty — nothing saved.');
+  // recorder
+  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  S.recorder = recorder;
+  recorder.ondataavailable = e => {
+    if (!e.data || !e.data.size) return;
+    const p = e.data.arrayBuffer();
+    S.hashQueue = S.hashQueue.then(async () => {
+      const bytes = new Uint8Array(await p);
+      S.chain = await sha256(concatU8([S.chain, bytes]));
+      S.chunks.push(bytes);
+      S.chunkSizes.push(bytes.length);
+      if (S.chunkSizes.length % 15 === 0)
+        logEvent('checkpoint', { chunkIndex: S.chunkSizes.length, chain: hex(S.chain).slice(0, 16) });
+    });
+  };
+  recorder.onerror = () => { logViolation('recorder_error'); finalizeSession(); };
+  recorder.onstop = () => finalizeSession();
+  recorder.start(2000);
+
+  // audio analysis
+  try {
+    S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = S.audioCtx.createMediaStreamSource(stream);
+    S.analyser = S.audioCtx.createAnalyser();
+    S.analyser.fftSize = 1024;
+    src.connect(S.analyser);
+  } catch (e) { /* meter unavailable; not fatal */ }
+
+  // track monitoring
+  for (const track of stream.getTracks()) {
+    track.onended = () => {
+      if (S && !S.finalized) {
+        logViolation('track_ended', { kind: track.kind });
+        stopRecorder();
+      }
+    };
+    track.onmute = () => logEvent('track_muted', { kind: track.kind });
+    track.onunmute = () => logEvent('track_unmuted', { kind: track.kind });
+  }
+  if (navigator.mediaDevices) navigator.mediaDevices.ondevicechange = () => { if (S && !S.finalized) logEvent('device_change'); };
+
+  document.addEventListener('visibilitychange', onVisChange);
+
+  // preview
+  if (req.media === 'video') {
+    const v = $('preview');
+    v.srcObject = stream;
+    v.classList.remove('hidden');
+    v.play().catch(() => {});
+    $('pillCam').classList.remove('hidden');
   } else {
-    await dbPut(item);
-    toast('Recording saved to library.');
-    await renderLibrary();
+    $('preview').classList.add('hidden');
+    $('pillCam').classList.add('hidden');
   }
 
-  // reset UI
-  timerEl.textContent = '00:00';
-  timerEl.classList.remove('recording');
-  statusPill.textContent = 'Ready';
-  statusPill.classList.remove('live');
-  btnRecord.disabled = false;
-  btnPause.disabled = true;
-  btnPause.textContent = 'Pause';
-  btnStop.disabled = true;
-  clearWave();
-  resetTranscriptUI();
+  logEvent('session_start', {
+    requirementTitle: req.title,
+    media: req.media,
+    mime,
+    userAgent: navigator.userAgent,
+    platform: navigator.platform || ''
+  });
+
+  // UI
+  $('setupView').classList.add('hidden');
+  $('resultView').classList.add('hidden');
+  $('activeView').classList.remove('hidden');
+  $('pillScreen').className = 'pill ok'; $('pillScreen').textContent = 'Screen: visible';
+  $('pillMic').className = 'pill ok'; $('pillMic').textContent = 'Mic: OK';
+  $('pillCam').className = 'pill ok' + (req.media === 'video' ? '' : ' hidden'); $('pillCam').textContent = 'Camera: OK';
+  renderSteps();
+  updateCompleteBtn();
+
+  S.intervals.push(setInterval(tickTimer, 250));
+  S.intervals.push(setInterval(tickMonitor, 500));
+  S.intervals.push(setInterval(tickClock, 10000));
 }
 
-/* ---- waveform ---- */
-function sizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  waveCanvas.width = waveCanvas.clientWidth * dpr;
-  waveCanvas.height = waveCanvas.clientHeight * dpr;
-}
-window.addEventListener('resize', sizeCanvas);
-
-function drawWave() {
-  sizeCanvas();
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  const draw = () => {
-    animFrame = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(data);
-    const w = waveCanvas.width, h = waveCanvas.height;
-    waveCtx.clearRect(0, 0, w, h);
-    const bars = 64;
-    const step = Math.floor(data.length / bars);
-    const barW = w / bars;
-    waveCtx.fillStyle = '#e0524d';
-    for (let i = 0; i < bars; i++) {
-      const v = data[i * step] / 255;
-      const bh = Math.max(2, v * h * 0.9);
-      waveCtx.globalAlpha = 0.35 + v * 0.65;
-      waveCtx.fillRect(i * barW + barW * 0.15, (h - bh) / 2, barW * 0.7, bh);
+function renderSteps() {
+  const box = $('stepsList');
+  box.innerHTML = '';
+  S.req.steps.forEach((text, i) => {
+    const el = document.createElement('div');
+    el.className = 'step' + (i < S.stepsDone ? ' done' : i === S.stepsDone ? ' current' : '');
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = i < S.stepsDone ? '✓' : String(i + 1);
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    txt.textContent = text;
+    el.append(num, txt);
+    if (i === S.stepsDone) {
+      const b = document.createElement('button');
+      b.className = 'btn small green';
+      b.textContent = 'Mark done';
+      b.onclick = () => {
+        logEvent('step_ack', { index: i, step: text });
+        S.stepsDone++;
+        renderSteps();
+        updateCompleteBtn();
+      };
+      el.appendChild(b);
     }
-    waveCtx.globalAlpha = 1;
-  };
-  draw();
+    box.appendChild(el);
+  });
 }
 
-function clearWave() {
-  sizeCanvas();
-  waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+function sessionElapsedMs() { return performance.now() - S.startPerf; }
+
+function tickTimer() {
+  if (!S || S.finalized) return;
+  $('timer').textContent = fmtTime(sessionElapsedMs() / 1000);
+  updateCompleteBtn();
 }
 
-/* =============== Live transcription (Web Speech API, optional) =============== */
-const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-const transcriptEl = $('transcript');
-const transcriptLabel = $('transcriptLabel');
-const transcribeToggle = $('transcribeToggle');
-let recognition = null;
-let finalTranscript = '';
-let transcriptionActive = false;
+function updateCompleteBtn() {
+  if (!S) return;
+  const remain = S.req.minDurationSec - sessionElapsedMs() / 1000;
+  const stepsLeft = S.req.steps.length - S.stepsDone;
+  const b = $('btnComplete');
+  if (remain > 0) {
+    b.textContent = `Complete session (min. duration in ${fmtTime(remain)})`;
+    $('minDurHint').textContent = `Required minimum: ${fmtTime(S.req.minDurationSec)} continuous.` + (stepsLeft ? ` ${stepsLeft} step(s) remaining.` : '');
+  } else {
+    b.textContent = stepsLeft ? `Complete session (${stepsLeft} step(s) not done)` : 'Complete session ✓';
+    $('minDurHint').textContent = stepsLeft ? `${stepsLeft} step(s) remaining.` : 'Minimum duration reached — complete when all steps are done.';
+  }
+}
 
-if (SpeechRec) $('transcribeToggleWrap').style.display = 'inline-flex';
+function tickMonitor() {
+  if (!S || S.finalized) return;
+  const now = performance.now();
+  const rules = S.req.rules;
 
-function startTranscription() {
-  finalTranscript = '';
-  if (!SpeechRec || !transcribeToggle.checked) return;
-  transcriptionActive = true;
-  recognition = new SpeechRec();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = navigator.language || 'en-US';
-  recognition.onresult = e => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) finalTranscript += t + ' ';
-      else interim += t;
+  // audio level + silence
+  if (S.analyser) {
+    const data = new Uint8Array(S.analyser.fftSize);
+    S.analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) { const d = (data[i] - 128) / 128; sum += d * d; }
+    const rms = Math.sqrt(sum / data.length);
+    $('meter').style.width = Math.min(100, Math.round(rms * 380)) + '%';
+    const silent = rms < 0.008;
+    if (silent) {
+      if (S.silentSince === null) S.silentSince = now;
+      const dur = (now - S.silentSince) / 1000;
+      if (rules.invalidateOnSilence && dur > rules.maxSilenceSec) logViolation('extended_silence', { seconds: Math.round(dur) });
+      $('pillMic').className = dur > 5 ? 'pill' : 'pill ok';
+      $('pillMic').textContent = dur > 5 ? 'Mic: silent' : 'Mic: OK';
+    } else {
+      if (S.silentSince !== null && (now - S.silentSince) > 15000)
+        logEvent('silence_period', { seconds: Math.round((now - S.silentSince) / 1000) });
+      S.silentSince = null;
+      $('pillMic').className = 'pill ok';
+      $('pillMic').textContent = 'Mic: OK';
     }
-    transcriptEl.style.display = 'block';
-    transcriptLabel.style.display = 'block';
-    transcriptEl.innerHTML = '';
-    transcriptEl.append(document.createTextNode(finalTranscript));
-    const span = document.createElement('span');
-    span.className = 'interim';
-    span.textContent = interim;
-    transcriptEl.append(span);
-    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  // camera darkness + periodic snapshots
+  if (S.req.media === 'video') {
+    const v = $('preview');
+    if (v.videoWidth > 0) {
+      const c = document.createElement('canvas');
+      c.width = 48; c.height = 36;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      let luma = 0;
+      try {
+        const img = ctx.getImageData(0, 0, c.width, c.height).data;
+        for (let i = 0; i < img.length; i += 4) luma += 0.299 * img[i] + 0.587 * img[i+1] + 0.114 * img[i+2];
+        luma /= img.length / 4;
+      } catch (e) { luma = 255; }
+      const dark = luma < 14;
+      if (dark) {
+        if (S.darkSince === null) { S.darkSince = now; logEvent('camera_dark_start'); }
+        const dur = (now - S.darkSince) / 1000;
+        if (rules.invalidateOnDark && dur > rules.darkMaxSec) logViolation('camera_obscured', { seconds: Math.round(dur) });
+        $('pillCam').className = 'pill bad'; $('pillCam').textContent = 'Camera: obscured';
+      } else {
+        if (S.darkSince !== null) { logEvent('camera_dark_end', { seconds: Math.round((now - S.darkSince) / 1000) }); S.darkSince = null; }
+        $('pillCam').className = 'pill ok'; $('pillCam').textContent = 'Camera: OK';
+      }
+      // snapshot every 30s
+      if (now - S.lastSnapT > 30000) {
+        S.lastSnapT = now;
+        takeSnapshot(v);
+      }
+    }
+  }
+
+  // hidden-duration violation fires live, not just on return
+  if (S.hiddenSince !== null && rules.invalidateOnHide) {
+    const dur = (now - S.hiddenSince) / 1000;
+    if (dur > rules.maxHiddenSec) logViolation('screen_hidden', { seconds: Math.round(dur) });
+  }
+}
+
+function takeSnapshot(v) {
+  const c = document.createElement('canvas');
+  const scale = Math.min(1, 320 / v.videoWidth);
+  c.width = Math.round(v.videoWidth * scale);
+  c.height = Math.round(v.videoHeight * scale);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const t = Math.round(sessionElapsedMs());
+  const mySession = S;
+  c.toBlob(async blob => {
+    if (!blob || !mySession || mySession.finalized || mySession !== S) return;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    mySession.snapCount++;
+    const name = 'snapshots/snap_' + String(mySession.snapCount).padStart(4, '0') + '.jpg';
+    const h = await sha256Hex(bytes);
+    mySession.snapshots.push({ file: name, t, sha256: h, bytes });
+    logEvent('snapshot', { file: name, sha256: h.slice(0, 16) });
+  }, 'image/jpeg', 0.7);
+}
+
+function onVisChange() {
+  if (!S || S.finalized) return;
+  if (document.hidden) {
+    S.hiddenSince = performance.now();
+    logEvent('screen_hidden');
+    $('pillScreen').className = 'pill bad';
+    $('pillScreen').textContent = 'Screen: HIDDEN';
+  } else {
+    const dur = S.hiddenSince ? Math.round((performance.now() - S.hiddenSince) / 1000) : 0;
+    S.hiddenSince = null;
+    logEvent('screen_visible', { hiddenSeconds: dur });
+    $('pillScreen').className = 'pill ok';
+    $('pillScreen').textContent = 'Screen: visible';
+  }
+}
+
+function tickClock() {
+  if (!S || S.finalized) return;
+  const drift = (Date.now() - S.startWall) - (performance.now() - S.startPerf);
+  if (Math.abs(drift) > 3000 && !S.flagged.has('_clock')) {
+    S.flagged.add('_clock');
+    logEvent('clock_anomaly', { driftMs: Math.round(drift) });
+  }
+}
+
+function stopRecorder() {
+  if (S && S.recorder && S.recorder.state !== 'inactive') {
+    try { S.recorder.requestData(); } catch (e) {}
+    S.recorder.stop();   // finalizeSession runs from onstop
+  } else {
+    finalizeSession();
+  }
+}
+
+function completeSession() {
+  if (!S || S.finalized) return;
+  const remain = S.req.minDurationSec - sessionElapsedMs() / 1000;
+  const stepsLeft = S.req.steps.length - S.stepsDone;
+  if (remain > 0 || (S.req.rules.requireAllSteps && stepsLeft > 0)) {
+    const why = [];
+    if (remain > 0) why.push(`the minimum duration has ${fmtTime(remain)} remaining`);
+    if (stepsLeft > 0) why.push(`${stepsLeft} step(s) are not marked done`);
+    if (!confirm(`Completing now will make this session INVALID because ${why.join(' and ')}. Complete anyway?`)) return;
+  }
+  logEvent('complete_pressed');
+  stopRecorder();
+}
+
+function abortSession() {
+  if (!S || S.finalized) return;
+  if (!confirm('Abort this session? It will be recorded as an INVALID (rejected) attempt.')) return;
+  S.aborted = true;
+  logEvent('session_aborted');
+  stopRecorder();
+}
+
+/* ======================================================================
+   8. Packaging (seal + zip)
+====================================================================== */
+async function computeIntegrity(core) {
+  return sha256Hex(utf8(stableStringify(core)));
+}
+function sealCodeFrom(seal) {
+  const s = seal.slice(0, 12).toUpperCase();
+  return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12);
+}
+
+async function finalizeSession() {
+  if (!S || S.finalized) return;
+  S.finalized = true;
+  const sess = S;
+
+  // teardown
+  sess.intervals.forEach(clearInterval);
+  document.removeEventListener('visibilitychange', onVisChange);
+  if (navigator.mediaDevices) navigator.mediaDevices.ondevicechange = null;
+  sess.stream.getTracks().forEach(t => { t.onended = null; try { t.stop(); } catch (e) {} });
+  if (sess.audioCtx) sess.audioCtx.close().catch(() => {});
+  $('preview').srcObject = null;
+
+  $('activeView').classList.add('hidden');
+  $('packagingView').classList.remove('hidden');
+
+  await sess.hashQueue;   // all chunk hashes folded in
+
+  const endWall = Date.now();
+  const durationMs = Math.round(performance.now() - sess.startPerf);
+  const clockDriftMs = Math.round((endWall - sess.startWall) - durationMs);
+  if (!sess.aborted) sess.events.push({ t: durationMs, wall: new Date(endWall).toISOString(), type: 'session_complete', detail: null });
+
+  const verdict = computeVerdict(sess.events, sess.req, durationMs);
+  const media = concatU8(sess.chunks);
+  sess.chunks = null;
+  const mediaHash = await sha256Hex(media);
+  const reqHash = await requirementHash(sess.req);
+  const eventsHash = await sha256Hex(utf8(stableStringify(sess.events)));
+  const ext = extFor(sess.mime);
+  const mediaFile = 'recording.' + ext;
+
+  const core = {
+    sessionId: sess.id,
+    requirementHash: reqHash,
+    media: { totalBytes: media.length, sha256: mediaHash, chunkChainFinal: hex(sess.chain) },
+    timing: {
+      startedWall: new Date(sess.startWall).toISOString(),
+      endedWall: new Date(endWall).toISOString(),
+      durationMs, clockDriftMs
+    },
+    verdict,
+    eventsHash
   };
-  recognition.onend = () => {
-    // Chrome stops recognition periodically; restart while still recording
-    if (transcriptionActive) { try { recognition.start(); } catch (e) {} }
+  const seal = await computeIntegrity(core);
+  const sealCode = sealCodeFrom(seal);
+
+  const manifest = {
+    format: 'recording-assistant-packet',
+    formatVersion: 1,
+    sessionId: sess.id,
+    createdAt: new Date(endWall).toISOString(),
+    requirement: sess.req,
+    requirementHash: reqHash,
+    timing: core.timing,
+    media: {
+      filename: mediaFile,
+      mime: sess.mime || (sess.req.media === 'video' ? 'video/webm' : 'audio/webm'),
+      totalBytes: media.length,
+      sha256: mediaHash,
+      chunkSizes: sess.chunkSizes,
+      chunkChainFinal: hex(sess.chain)
+    },
+    snapshots: sess.snapshots.map(s => ({ file: s.file, t: s.t, sha256: s.sha256 })),
+    events: sess.events,
+    verdict,
+    integrity: { eventsHash, seal, sealCode }
   };
-  try { recognition.start(); } catch (e) {}
+
+  const readme =
+`RECORDING ASSISTANT — VERIFICATION PACKET
+=========================================
+Session:     ${sess.id}
+Requirement: ${sess.req.title}
+Recorded:    ${core.timing.startedWall} → ${core.timing.endedWall}
+Verdict:     ${verdict.valid ? 'VALID' : 'INVALID (rejected)'}
+Seal code:   ${sealCode}
+
+TO VERIFY: open the Recording Assistant app (index.html), go to the
+"Verify Packet" tab, and drop this .zip file in. The app recomputes every
+hash from the raw media bytes and re-derives the verdict from the event log.
+
+Compare the seal code above with the code the participant sent you directly
+at the moment the session ended. A matching, independently received seal
+code is what proves this packet was not rebuilt after the fact.
+
+Do not edit any file in this packet — any change will fail verification.`;
+
+  const zipFiles = [
+    { name: 'README.txt', data: utf8(readme) },
+    { name: 'manifest.json', data: utf8(JSON.stringify(manifest, null, 2)) },
+    { name: mediaFile, data: media }
+  ];
+  for (const s of sess.snapshots) zipFiles.push({ name: s.file, data: s.bytes });
+
+  const zipBlob = buildZip(zipFiles);
+  const stamp = new Date(endWall).toISOString().slice(0, 16).replace(/[:T]/g, '').replace(/(\d{8})(\d{4})/, '$1-$2');
+  const filename = `packet_${sess.req.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}_${stamp}_${verdict.valid ? 'VALID' : 'INVALID'}.zip`;
+
+  await idb.put('packets', {
+    id: sess.id,
+    createdAt: endWall,
+    title: sess.req.title,
+    valid: verdict.valid,
+    reasons: verdict.reasons,
+    sealCode,
+    size: zipBlob.size,
+    durationMs,
+    filename,
+    blob: zipBlob
+  });
+  localStorage.removeItem(ACTIVE_KEY);
+
+  // result UI
+  $('packagingView').classList.add('hidden');
+  $('resultView').classList.remove('hidden');
+  const vb = $('verdictBox');
+  vb.className = 'verdict ' + (verdict.valid ? 'valid' : 'invalid');
+  vb.innerHTML = verdict.valid
+    ? `<div class="big">✅ SESSION VALID</div><div class="hint" style="margin-top:6px">All conditions were satisfied for the full duration. Deliver the packet to your Accountability Partner.</div>`
+    : `<div class="big">❌ SESSION REJECTED — INVALID</div><div class="hint" style="margin-top:6px">This session did not satisfy the requirement and must be redone:</div><ul>${verdict.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+  $('sealCode').textContent = sealCode;
+
+  $('btnDownloadPacket').onclick = () => downloadBlob(zipBlob, filename);
+  $('btnCopySeal').onclick = () => {
+    navigator.clipboard && navigator.clipboard.writeText(sealCode).then(() => toast('Seal code copied.'), () => toast(sealCode));
+  };
+  const shareBtn = $('btnSharePacket');
+  const shareFile = new File([zipBlob], filename, { type: 'application/zip' });
+  if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+    shareBtn.classList.remove('hidden');
+    shareBtn.onclick = () => navigator.share({ files: [shareFile], title: 'Verification packet' }).catch(() => {});
+  } else {
+    shareBtn.classList.add('hidden');
+  }
+
+  renderHistory();
+  S = null;
 }
 
-function pauseTranscription() {
-  if (recognition) { transcriptionActive = false; try { recognition.stop(); } catch (e) {} }
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
 }
 
-function resumeTranscription() {
-  if (SpeechRec && transcribeToggle.checked && recognition) {
-    transcriptionActive = true;
-    try { recognition.start(); } catch (e) {}
+/* ======================================================================
+   9. Verification (partner side)
+====================================================================== */
+let verifyMediaUrl = null;
+
+async function verifyPacket(file) {
+  const report = $('verifyReport');
+  report.innerHTML = '<div class="card"><h2>Verifying…</h2><p class="hint">Recomputing hashes from raw bytes.</p></div>';
+  if (verifyMediaUrl) { URL.revokeObjectURL(verifyMediaUrl); verifyMediaUrl = null; }
+
+  const checks = [];
+  const add = (label, ok, detail) => checks.push({ label, ok, detail: detail || '' });
+  let manifest = null, files = null, mediaBytes = null;
+
+  try {
+    files = parseZip(await file.arrayBuffer());
+    add('Packet structure (zip) readable', true, Object.keys(files).length + ' files');
+  } catch (e) {
+    renderVerifyReport(null, [{ label: 'Packet structure', ok: false, detail: e.message }], null, null);
+    return;
+  }
+
+  try {
+    if (!files['manifest.json']) throw new Error('manifest.json missing');
+    manifest = JSON.parse(new TextDecoder().decode(files['manifest.json']));
+    if (manifest.format !== 'recording-assistant-packet') throw new Error('not a Recording Assistant packet');
+    add('Manifest present and well-formed', true, 'format v' + manifest.formatVersion);
+  } catch (e) {
+    add('Manifest present and well-formed', false, e.message);
+    renderVerifyReport(null, checks, null, null);
+    return;
+  }
+
+  mediaBytes = files[manifest.media.filename];
+  if (!mediaBytes) {
+    add('Media file present', false, manifest.media.filename + ' missing from packet');
+    renderVerifyReport(manifest, checks, null, files);
+    return;
+  }
+  add('Media file present', true, `${manifest.media.filename}, ${fmtSize(mediaBytes.length)}`);
+
+  // byte count vs chunk map
+  const chunkSum = (manifest.media.chunkSizes || []).reduce((a, b) => a + b, 0);
+  const sizeOk = mediaBytes.length === manifest.media.totalBytes && chunkSum === mediaBytes.length;
+  add('Media size matches capture-time chunk map', sizeOk,
+    `file ${mediaBytes.length} B · manifest ${manifest.media.totalBytes} B · chunk map ${chunkSum} B`);
+
+  // full-file hash
+  const fileHash = await sha256Hex(mediaBytes);
+  add('Media SHA-256 matches', fileHash === manifest.media.sha256, fileHash.slice(0, 32) + '…');
+
+  // hash chain over original capture chunks
+  let chainOk = false;
+  if (sizeOk) {
+    let chain = await sha256(utf8(manifest.sessionId));
+    let off = 0;
+    for (const sz of manifest.media.chunkSizes) {
+      chain = await sha256(concatU8([chain, mediaBytes.subarray(off, off + sz)]));
+      off += sz;
+    }
+    chainOk = hex(chain) === manifest.media.chunkChainFinal;
+  }
+  add('Capture-time hash chain reproduces (every byte, in order)', chainOk,
+    chainOk ? manifest.media.chunkSizes.length + ' chunks verified' : 'chain mismatch — media bytes differ from what was captured');
+
+  // snapshots
+  let snapsOk = true, snapsChecked = 0;
+  for (const s of manifest.snapshots || []) {
+    const b = files[s.file];
+    if (!b || (await sha256Hex(b)) !== s.sha256) { snapsOk = false; break; }
+    snapsChecked++;
+  }
+  add('Camera snapshots match their capture-time hashes', snapsOk, snapsChecked + ' of ' + (manifest.snapshots || []).length + ' verified');
+
+  // events hash
+  const evHash = await sha256Hex(utf8(stableStringify(manifest.events)));
+  add('Event log hash matches', evHash === manifest.integrity.eventsHash, evHash.slice(0, 32) + '…');
+
+  // independent verdict recomputation
+  const recomputed = computeVerdict(manifest.events, manifest.requirement, manifest.timing.durationMs);
+  add('Verdict re-derived independently from event log matches packet verdict',
+    recomputed.valid === manifest.verdict.valid,
+    `re-derived: ${recomputed.valid ? 'VALID' : 'INVALID'}${recomputed.reasons.length ? ' — ' + recomputed.reasons.join('; ') : ''}`);
+
+  // requirement fingerprint
+  const reqHash = await requirementHash(manifest.requirement);
+  add('Requirement fingerprint matches embedded requirement', reqHash === manifest.requirementHash,
+    'fingerprint ' + reqHash.slice(0, 24) + '… — compare with your own copy of the requirement');
+
+  // seal
+  const core = {
+    sessionId: manifest.sessionId,
+    requirementHash: manifest.requirementHash,
+    media: { totalBytes: manifest.media.totalBytes, sha256: manifest.media.sha256, chunkChainFinal: manifest.media.chunkChainFinal },
+    timing: manifest.timing,
+    verdict: manifest.verdict,
+    eventsHash: manifest.integrity.eventsHash
+  };
+  const seal = await computeIntegrity(core);
+  const sealOk = seal === manifest.integrity.seal && sealCodeFrom(seal) === manifest.integrity.sealCode;
+  add('Integrity seal reproduces', sealOk, 'seal code ' + sealCodeFrom(seal));
+
+  // out-of-band seal comparison
+  const typed = ($('sealInput').value || '').replace(/[^a-f0-9]/gi, '').toUpperCase();
+  if (typed) {
+    add('Seal code matches the one received directly from the participant',
+      typed === seal.slice(0, 12).toUpperCase(),
+      typed === seal.slice(0, 12).toUpperCase()
+        ? 'out-of-band code confirmed — packet was not rebuilt after completion'
+        : 'MISMATCH — this packet is NOT the one sealed at completion time');
+  } else {
+    add('Out-of-band seal code comparison', true,
+      'skipped — no code entered. Without it, a technically consistent packet could still have been fully re-forged; always compare the code the participant sent you at completion time.');
+  }
+
+  renderVerifyReport(manifest, checks, mediaBytes, files);
+}
+
+function renderVerifyReport(manifest, checks, mediaBytes, files) {
+  const report = $('verifyReport');
+  const allOk = checks.every(c => c.ok);
+  let html = '<div class="card">';
+
+  if (manifest) {
+    const v = manifest.verdict;
+    const trustworthy = allOk;
+    html += `<div class="verdict ${v.valid && trustworthy ? 'valid' : 'invalid'}">` +
+      `<div class="big">${!trustworthy ? '❌ PACKET FAILS VERIFICATION' : v.valid ? '✅ VERIFIED — SESSION VALID' : '❌ SESSION WAS REJECTED (INVALID)'}</div>`;
+    if (!trustworthy) html += `<div class="hint" style="margin-top:6px">One or more integrity checks failed — treat this packet as unreliable.</div>`;
+    else if (!v.valid) html += `<ul>${v.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
+    html += '</div>';
+    html += `<div class="req-detail">` +
+      `<strong>${esc(manifest.requirement.title)}</strong><br>` +
+      `<span class="kv">Session ${esc(manifest.sessionId)} · ${esc(manifest.timing.startedWall)} → ${esc(manifest.timing.endedWall)} · ` +
+      `duration ${fmtTime(manifest.timing.durationMs / 1000)} · clock drift ${manifest.timing.clockDriftMs} ms</span><br>` +
+      `<span class="kv mono">Requirement fingerprint: ${esc(manifest.requirementHash)}</span></div>`;
+  }
+
+  html += '<h3>Integrity checks</h3>';
+  for (const c of checks) {
+    html += `<div class="check ${c.ok ? 'pass' : 'fail'}"><span class="ico">${c.ok ? '✔' : '✘'}</span>` +
+      `<div><div>${esc(c.label)}</div>${c.detail ? `<div class="detail">${esc(c.detail)}</div>` : ''}</div></div>`;
+  }
+  html += '</div>';
+  report.innerHTML = html;
+
+  if (manifest && mediaBytes) {
+    const mediaCard = document.createElement('div');
+    mediaCard.className = 'card';
+    mediaCard.innerHTML = '<h2>Recording</h2>';
+    const blob = new Blob([mediaBytes], { type: manifest.media.mime });
+    verifyMediaUrl = URL.createObjectURL(blob);
+    const isVideo = (manifest.media.mime || '').startsWith('video');
+    const player = document.createElement(isVideo ? 'video' : 'audio');
+    player.controls = true;
+    if (isVideo) player.className = 'playback';
+    player.src = verifyMediaUrl;
+    mediaCard.appendChild(player);
+
+    if ((manifest.snapshots || []).length && files) {
+      const h = document.createElement('h3');
+      h.textContent = 'Camera snapshots (every 30s)';
+      const g = document.createElement('div');
+      g.className = 'snaps';
+      for (const s of manifest.snapshots) {
+        if (!files[s.file]) continue;
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(new Blob([files[s.file]], { type: 'image/jpeg' }));
+        img.title = 'at ' + fmtTime(s.t / 1000);
+        g.appendChild(img);
+      }
+      mediaCard.append(h, g);
+    }
+    report.appendChild(mediaCard);
+
+    // event timeline
+    const evCard = document.createElement('div');
+    evCard.className = 'card';
+    evCard.innerHTML = '<h2>Event timeline</h2>';
+    const tbl = document.createElement('table');
+    tbl.className = 'events';
+    tbl.innerHTML = '<tr><th>Time</th><th>Event</th><th>Detail</th></tr>';
+    for (const e of manifest.events) {
+      const tr = document.createElement('tr');
+      const detail = e.detail ? Object.entries(e.detail).map(([k, v]) => `${k}: ${v}`).join(', ') : '';
+      tr.innerHTML = `<td class="mono">${fmtTime(e.t / 1000)}</td>` +
+        `<td class="${e.type === 'violation' ? 'ev-violation' : ''}">${esc(e.type)}</td>` +
+        `<td class="kv">${esc(detail)}</td>`;
+      tbl.appendChild(tr);
+    }
+    evCard.appendChild(tbl);
+    report.appendChild(evCard);
   }
 }
 
-function stopTranscription() {
-  transcriptionActive = false;
-  if (recognition) { try { recognition.stop(); } catch (e) {} recognition = null; }
-}
-
-function resetTranscriptUI() {
-  transcriptEl.style.display = 'none';
-  transcriptLabel.style.display = 'none';
-  transcriptEl.textContent = '';
-}
-
-/* =============== Upload local files =============== */
-const dropzone = $('dropzone');
-const fileInput = $('fileInput');
-
-dropzone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
-
-['dragenter', 'dragover'].forEach(ev =>
-  dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
-['dragleave', 'drop'].forEach(ev =>
-  dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
-dropzone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
-
-async function handleFiles(fileList) {
-  const files = Array.from(fileList || []);
-  if (!files.length) return;
-  let added = 0;
-  for (const file of files) {
-    const looksAudio = (file.type && file.type.startsWith('audio')) ||
-      /\.(mp3|wav|m4a|ogg|oga|webm|flac|aac|opus|wma|amr|3gp)$/i.test(file.name);
-    if (!looksAudio) { toast(`Skipped "${file.name}" — not an audio file.`); continue; }
-    const blob = file.slice(0, file.size, file.type || 'audio/mpeg');
-    const duration = await getBlobDuration(blob);
-    await dbPut({
-      id: uid(),
-      name: file.name.replace(/\.[^.]+$/, ''),
-      createdAt: Date.now(),
-      source: 'uploaded',
-      mime: blob.type,
-      size: blob.size,
-      duration,
-      notes: '',
-      transcript: '',
-      blob,
-      origExt: (file.name.match(/\.([^.]+)$/) || [])[1] || ''
-    });
-    added++;
-  }
-  if (added) {
-    toast(`Added ${added} file${added > 1 ? 's' : ''} to library.`);
-    await renderLibrary();
+/* ======================================================================
+   10. History
+====================================================================== */
+async function renderHistory() {
+  const list = (await idb.all('packets')).sort((a, b) => b.createdAt - a.createdAt);
+  const box = $('historyList');
+  box.innerHTML = '';
+  $('historyEmpty').classList.toggle('hidden', list.length > 0);
+  for (const p of list) {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML =
+      `<div class="toprow"><span class="badge ${p.valid ? 'valid' : 'invalid'}">${p.valid ? 'Valid' : 'Rejected'}</span>` +
+      `<span class="name">${esc(p.title)}</span>` +
+      `<span class="meta">${fmtTime(p.durationMs / 1000)} · ${fmtSize(p.size)} · ${fmtDate(p.createdAt)}</span></div>` +
+      `<div class="meta mono" style="margin-top:6px">seal ${esc(p.sealCode)}</div>` +
+      (p.valid ? '' : `<div class="meta" style="margin-top:4px">${p.reasons.map(esc).join(' · ')}</div>`);
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const dl = document.createElement('button');
+    dl.className = 'btn small';
+    dl.textContent = 'Download packet';
+    dl.onclick = () => downloadBlob(p.blob, p.filename);
+    const del = document.createElement('button');
+    del.className = 'btn small danger';
+    del.textContent = 'Delete';
+    del.onclick = async () => {
+      if (!confirm('Delete this packet from the device? If it was not delivered, it cannot be recovered.')) return;
+      await idb.del('packets', p.id);
+      renderHistory();
+    };
+    actions.append(dl, del);
+    el.appendChild(actions);
+    box.appendChild(el);
   }
 }
 
-/* =============== Library =============== */
-const libraryEl = $('library');
-const emptyState = $('emptyState');
-const libCount = $('libCount');
-const searchInput = $('search');
-const objectUrls = new Map(); // id -> URL, revoked on re-render
-
-searchInput.addEventListener('input', () => renderLibrary());
-
-async function renderLibrary() {
-  const all = (await dbGetAll()).sort((a, b) => b.createdAt - a.createdAt);
-  const q = searchInput.value.trim().toLowerCase();
-  const items = q
-    ? all.filter(i =>
-        i.name.toLowerCase().includes(q) ||
-        (i.notes || '').toLowerCase().includes(q) ||
-        (i.transcript || '').toLowerCase().includes(q))
-    : all;
-
-  for (const url of objectUrls.values()) URL.revokeObjectURL(url);
-  objectUrls.clear();
-  libraryEl.innerHTML = '';
-
-  libCount.textContent = all.length ? `(${all.length})` : '';
-  emptyState.style.display = all.length ? 'none' : 'block';
-  if (all.length && !items.length) {
-    emptyState.style.display = 'block';
-    emptyState.textContent = 'No recordings match your search.';
-  } else if (!all.length) {
-    emptyState.innerHTML = 'No recordings yet. Hit <strong>Record</strong> or upload a file to get started.';
-  }
-
-  for (const item of items) libraryEl.appendChild(renderItem(item));
-}
-
-function renderItem(item) {
-  const el = document.createElement('div');
-  el.className = 'item';
-
-  const row = document.createElement('div');
-  row.className = 'item-row';
-
-  const badge = document.createElement('span');
-  badge.className = 'badge ' + (item.source === 'recorded' ? 'rec' : 'upload');
-  badge.textContent = item.source === 'recorded' ? 'Rec' : 'File';
-
-  const nameInput = document.createElement('input');
-  nameInput.className = 'item-name';
-  nameInput.value = item.name;
-  nameInput.title = 'Click to rename';
-  nameInput.addEventListener('change', async () => {
-    item.name = nameInput.value.trim() || item.name;
-    nameInput.value = item.name;
-    await dbPut(item);
-    toast('Renamed.');
+/* ======================================================================
+   11. Tabs & wiring
+====================================================================== */
+document.querySelectorAll('nav.tabs button').forEach(b => {
+  b.addEventListener('click', () => {
+    if (S && !S.finalized) { toast('A session is in progress — complete or abort it first.'); return; }
+    document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('active', x === b));
+    ['session', 'verify', 'requirements', 'history'].forEach(t =>
+      $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
   });
-  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameInput.blur(); });
+});
 
-  const meta = document.createElement('span');
-  meta.className = 'item-meta';
-  const dur = item.duration ? fmtTime(item.duration) + ' · ' : '';
-  meta.textContent = `${dur}${fmtSize(item.size)} · ${fmtDate(item.createdAt)}`;
+$('reqSelect').addEventListener('change', renderReqDetail);
+$('btnStart').addEventListener('click', startSession);
+$('btnComplete').addEventListener('click', completeSession);
+$('btnAbort').addEventListener('click', abortSession);
+$('btnNewSession').addEventListener('click', async () => {
+  $('resultView').classList.add('hidden');
+  $('setupView').classList.remove('hidden');
+  await renderReqSelect();
+});
+$('btnSaveReq').addEventListener('click', saveNewRequirement);
+$('btnImportReq').addEventListener('click', () => $('reqFileInput').click());
+$('btnImportReq2').addEventListener('click', () => $('reqFileInput').click());
+$('reqFileInput').addEventListener('change', () => {
+  if ($('reqFileInput').files[0]) importRequirementFile($('reqFileInput').files[0]);
+  $('reqFileInput').value = '';
+});
 
-  row.append(badge, nameInput, meta);
-  el.appendChild(row);
-
-  const audio = document.createElement('audio');
-  audio.controls = true;
-  audio.preload = 'none';
-  const url = URL.createObjectURL(item.blob);
-  objectUrls.set(item.id, url);
-  audio.src = url;
-  el.appendChild(audio);
-
-  // actions
-  const actions = document.createElement('div');
-  actions.className = 'item-actions';
-
-  const btnNotes = document.createElement('button');
-  btnNotes.className = 'small';
-  btnNotes.textContent = item.notes ? 'Notes ●' : 'Notes';
-
-  const btnDownload = document.createElement('button');
-  btnDownload.className = 'small';
-  btnDownload.textContent = 'Download';
-  btnDownload.addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.href = url;
-    const ext = item.origExt || extFor(item.mime);
-    a.download = item.name.replace(/[\\/:*?"<>|]/g, '_') + '.' + ext;
-    a.click();
-  });
-
-  const btnDelete = document.createElement('button');
-  btnDelete.className = 'small danger';
-  btnDelete.textContent = 'Delete';
-  btnDelete.addEventListener('click', async () => {
-    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-    await dbDelete(item.id);
-    toast('Deleted.');
-    await renderLibrary();
-  });
-
-  actions.append(btnNotes, btnDownload);
-
-  // transcript (recorded items with live transcription)
-  if (item.transcript) {
-    const btnTr = document.createElement('button');
-    btnTr.className = 'small';
-    btnTr.textContent = 'Transcript';
-    const trEl = document.createElement('div');
-    trEl.className = 'item-transcript';
-    trEl.textContent = item.transcript;
-    btnTr.addEventListener('click', () => {
-      trEl.style.display = trEl.style.display === 'block' ? 'none' : 'block';
-    });
-    actions.append(btnTr);
-    el.appendChild(trEl);
-    el.insertBefore(trEl, null);
-  }
-
-  actions.append(btnDelete);
-  el.insertBefore(actions, el.querySelector('.item-transcript'));
-
-  const notes = document.createElement('textarea');
-  notes.className = 'item-notes';
-  notes.placeholder = 'Add notes…';
-  notes.value = item.notes || '';
-  let notesTimer;
-  notes.addEventListener('input', () => {
-    clearTimeout(notesTimer);
-    notesTimer = setTimeout(async () => {
-      item.notes = notes.value;
-      await dbPut(item);
-      btnNotes.textContent = item.notes ? 'Notes ●' : 'Notes';
-    }, 400);
-  });
-  btnNotes.addEventListener('click', () => {
-    notes.style.display = notes.style.display === 'block' ? 'none' : 'block';
-    if (notes.style.display === 'block') notes.focus();
-  });
-  el.appendChild(notes);
-
-  return el;
-}
-
-/* =============== Wire up =============== */
-btnRecord.addEventListener('click', startRecording);
-btnPause.addEventListener('click', togglePause);
-btnStop.addEventListener('click', stopRecording);
+const vd = $('verifyDrop');
+vd.addEventListener('click', () => $('verifyFile').click());
+$('verifyFile').addEventListener('change', () => {
+  if ($('verifyFile').files[0]) verifyPacket($('verifyFile').files[0]);
+  $('verifyFile').value = '';
+});
+['dragenter', 'dragover'].forEach(ev => vd.addEventListener(ev, e => { e.preventDefault(); vd.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => vd.addEventListener(ev, e => { e.preventDefault(); vd.classList.remove('dragover'); }));
+vd.addEventListener('drop', e => { if (e.dataTransfer.files[0]) verifyPacket(e.dataTransfer.files[0]); });
 
 window.addEventListener('beforeunload', e => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    e.preventDefault();
-    e.returnValue = '';
-  }
+  if (S && !S.finalized) { e.preventDefault(); e.returnValue = ''; }
 });
 
 (async function init() {
-  if (!navigator.mediaDevices || !window.MediaRecorder) {
-    statusPill.textContent = 'Recording not supported in this browser';
-    btnRecord.disabled = true;
-  }
-  clearWave();
   db = await openDB();
-  await renderLibrary();
+  await seedRequirements();
+  if (localStorage.getItem(ACTIVE_KEY)) {
+    $('interruptNotice').classList.remove('hidden');
+    localStorage.removeItem(ACTIVE_KEY);
+  }
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    $('btnStart').disabled = true;
+    toast('This browser does not support recording — use Chrome, Edge, Firefox, or Safari.');
+  }
+  await renderReqSelect();
+  await renderReqList();
+  await renderHistory();
 })();
 </script>
 </body>
