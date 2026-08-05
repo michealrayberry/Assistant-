@@ -194,6 +194,7 @@
     <button data-tab="verify">Verify Packet</button>
     <button data-tab="requirements">Requirements</button>
     <button data-tab="history">History</button>
+    <button data-tab="hosted">Hosted</button>
   </nav>
 
   <div id="interruptNotice" class="notice hidden">
@@ -247,6 +248,7 @@
         <div class="lbl">Seal code — send this to your Accountability Partner NOW via a separate channel (text / call)</div>
         <div class="code" id="sealCode"></div>
       </div>
+      <div class="req-detail hidden" id="deliveryStatus"></div>
       <p class="hint">Then deliver the packet file itself (download or share below — e.g. email, drive, messaging). The partner opens this same app, goes to <strong>Verify Packet</strong>, and drops the file in. The seal code they received directly from you at completion time is what proves the packet wasn't rebuilt afterward.</p>
       <div class="spacer"></div>
       <div class="row">
@@ -321,9 +323,56 @@
     </div>
   </section>
 
+  <!-- ================= HOSTED TAB ================= -->
+  <section id="tab-hosted" class="hidden">
+    <div class="card">
+      <h2>Hosted mode</h2>
+      <p class="hint" id="hostStatus">Checking for a server…</p>
+      <label class="fld">Server URL (leave blank when the app is opened from the server itself)</label>
+      <div class="row">
+        <input type="text" id="serverUrl" placeholder="https://your-server.example.com" style="flex:1;min-width:220px">
+        <button class="btn" id="btnSaveServer">Save &amp; test</button>
+      </div>
+      <div class="spacer"></div>
+      <p class="hint">To host your own: download <span class="mono">server.js</span> from the repository and run <span class="mono">node server.js</span> (Node 18+, no install needed) — then open <span class="mono">http://localhost:8787</span>, or deploy it to any Node host. Hosted mode adds <strong>server-witnessed seal timestamps</strong> (the seal is registered the instant a session completes, replacing the manual text-the-code step) and <strong>automatic packet delivery</strong> to the partner's inbox, with an optional webhook notification.</p>
+    </div>
+
+    <div class="card">
+      <h2>Participant — connect to your Accountability Partner</h2>
+      <div id="pairedBox" class="hidden">
+        <div class="req-detail" id="pairedInfo"></div>
+        <button class="btn danger" id="btnDisconnectPair">Disconnect</button>
+      </div>
+      <div id="unpairedBox">
+        <label class="fld">Pairing code from your partner</label>
+        <div class="row">
+          <input type="text" id="pairCode" placeholder="xxxxxxxxxxxxxxxx.xxxxxxxxxxxx…" style="flex:1;min-width:220px" autocomplete="off">
+          <button class="btn primary" id="btnConnectPair">Connect</button>
+        </div>
+        <div class="spacer"></div>
+        <p class="hint">Connecting imports the partner's requirement and turns on automatic delivery: every completed session registers its seal with the server (trusted timestamp) and uploads its packet to the partner's inbox on its own.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Partner — pairings &amp; inbox</h2>
+      <div id="partnerList"></div>
+      <h3>Create a pairing</h3>
+      <label class="fld">Pairing name</label>
+      <input type="text" id="npName" placeholder="e.g. Alex — daily check-in">
+      <label class="fld">Requirement the participant must follow</label>
+      <select id="npReq"></select>
+      <label class="fld">Webhook URL (optional — POSTed on each delivery; works with Slack / Discord / Zapier)</label>
+      <input type="text" id="npWebhook" placeholder="https://…">
+      <div class="spacer"></div>
+      <button class="btn primary" id="btnCreatePair">Create pairing</button>
+      <div id="newPairResult"></div>
+    </div>
+  </section>
+
   <div class="footer-note">
-    Everything runs and stays on this device — no server, no account. Integrity comes from SHA-256 hash chains sealed at capture time,<br>
-    cross-checked by the seal code the participant sends through a separate channel at the moment the session ends.
+    Offline mode: everything stays on this device, integrity via SHA-256 hash chains sealed at capture time, cross-checked by the seal code<br>
+    sent through a separate channel. Hosted mode adds server-witnessed timestamps and automatic delivery — see the Hosted tab.
   </div>
 </div>
 
@@ -1236,18 +1285,22 @@ Do not edit any file in this packet — any change will fail verification.`;
   const stamp = new Date(endWall).toISOString().slice(0, 16).replace(/[:T]/g, '').replace(/(\d{8})(\d{4})/, '$1-$2');
   const filename = `packet_${sess.req.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}_${stamp}_${verdict.valid ? 'VALID' : 'INVALID'}.zip`;
 
-  await idb.put('packets', {
+  const packetRec = {
     id: sess.id,
     createdAt: endWall,
     title: sess.req.title,
     valid: verdict.valid,
     reasons: verdict.reasons,
     sealCode,
+    seal,
     size: zipBlob.size,
     durationMs,
     filename,
-    blob: zipBlob
-  });
+    blob: zipBlob,
+    delivered: false,
+    deliveredAt: null
+  };
+  await idb.put('packets', packetRec);
   localStorage.removeItem(ACTIVE_KEY);
 
   // result UI
@@ -1275,6 +1328,9 @@ Do not edit any file in this packet — any change will fail verification.`;
 
   renderHistory();
   S = null;
+
+  // hosted mode: automatic seal registration + packet delivery
+  autoDeliver(packetRec);
 }
 
 function downloadBlob(blob, name) {
@@ -1491,8 +1547,11 @@ async function renderHistory() {
   for (const p of list) {
     const el = document.createElement('div');
     el.className = 'item';
+    const deliveredBadge = p.delivered
+      ? `<span class="badge valid">Delivered</span>`
+      : (participantPairing() ? `<span class="badge">Not delivered</span>` : '');
     el.innerHTML =
-      `<div class="toprow"><span class="badge ${p.valid ? 'valid' : 'invalid'}">${p.valid ? 'Valid' : 'Rejected'}</span>` +
+      `<div class="toprow"><span class="badge ${p.valid ? 'valid' : 'invalid'}">${p.valid ? 'Valid' : 'Rejected'}</span>${deliveredBadge}` +
       `<span class="name">${esc(p.title)}</span>` +
       `<span class="meta">${fmtTime(p.durationMs / 1000)} · ${fmtSize(p.size)} · ${fmtDate(p.createdAt)}</span></div>` +
       `<div class="meta mono" style="margin-top:6px">seal ${esc(p.sealCode)}</div>` +
@@ -1503,6 +1562,19 @@ async function renderHistory() {
     dl.className = 'btn small';
     dl.textContent = 'Download packet';
     dl.onclick = () => downloadBlob(p.blob, p.filename);
+    if (!p.delivered && participantPairing() && p.seal) {
+      const rd = document.createElement('button');
+      rd.className = 'btn small';
+      rd.textContent = 'Deliver to partner';
+      rd.onclick = async () => {
+        rd.disabled = true;
+        rd.textContent = 'Delivering…';
+        const r = await deliverPacket(p, null);
+        toast(r.ok ? 'Packet delivered.' : 'Delivery failed: ' + r.msg);
+        renderHistory();
+      };
+      actions.append(rd);
+    }
     const del = document.createElement('button');
     del.className = 'btn small danger';
     del.textContent = 'Delete';
@@ -1524,8 +1596,9 @@ document.querySelectorAll('nav.tabs button').forEach(b => {
   b.addEventListener('click', () => {
     if (S && !S.finalized) { toast('A session is in progress — complete or abort it first.'); return; }
     document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('active', x === b));
-    ['session', 'verify', 'requirements', 'history'].forEach(t =>
+    ['session', 'verify', 'requirements', 'history', 'hosted'].forEach(t =>
       $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+    if (b.dataset.tab === 'hosted') refreshHosted();
   });
 });
 
@@ -1559,6 +1632,273 @@ vd.addEventListener('drop', e => { if (e.dataTransfer.files[0]) verifyPacket(e.d
 window.addEventListener('beforeunload', e => {
   if (S && !S.finalized) { e.preventDefault(); e.returnValue = ''; }
 });
+
+/* ======================================================================
+   12. Hosted mode — pairing, server-witnessed seals, automatic delivery
+====================================================================== */
+function hostedBase() {
+  const saved = (localStorage.getItem('ra_server_url') || '').trim().replace(/\/+$/, '');
+  if (saved) return saved;
+  if (location.protocol === 'http:' || location.protocol === 'https:') return '';
+  return null; // file:// with no server configured
+}
+function participantPairing() {
+  try { return JSON.parse(localStorage.getItem('ra_pairing') || 'null'); } catch (e) { return null; }
+}
+function partnerPairings() {
+  try { return JSON.parse(localStorage.getItem('ra_partner') || '[]'); } catch (e) { return []; }
+}
+function savePartnerPairings(list) { localStorage.setItem('ra_partner', JSON.stringify(list)); }
+
+async function api(path, opts) {
+  const base = hostedBase();
+  if (base === null) throw new Error('no server configured');
+  const o = opts || {};
+  const res = await fetch(base + path, {
+    method: o.method || 'GET',
+    headers: o.body ? { 'Content-Type': 'application/json' } : undefined,
+    body: o.body ? JSON.stringify(o.body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+async function serverReachable() {
+  try { const p = await api('/api/ping'); return !!p.ok; } catch (e) { return false; }
+}
+
+async function refreshHosted() {
+  $('serverUrl').value = localStorage.getItem('ra_server_url') || '';
+  const base = hostedBase();
+  const status = $('hostStatus');
+  if (base === null) {
+    status.textContent = 'Offline mode — the app was opened as a local file and no server URL is set. Manual download/share delivery still works; set a server URL below or open the app from a running server to enable automatic delivery.';
+  } else {
+    status.textContent = 'Checking server…';
+    const ok = await serverReachable();
+    status.textContent = ok
+      ? `✅ Connected to server ${base || location.origin} — automatic delivery is available.`
+      : `❌ Server ${base || location.origin} is not responding. Automatic delivery is unavailable; manual download/share still works.`;
+  }
+  // participant box
+  const pairing = participantPairing();
+  $('pairedBox').classList.toggle('hidden', !pairing);
+  $('unpairedBox').classList.toggle('hidden', !!pairing);
+  if (pairing) {
+    $('pairedInfo').innerHTML =
+      `<strong>${esc(pairing.name)}</strong><br>` +
+      `<span class="kv">Requirement: ${esc(pairing.reqTitle)} · fingerprint ${esc((pairing.reqHash || '').slice(0, 16))}…</span><br>` +
+      `<span class="kv">Completed sessions are delivered automatically to this partner.</span>`;
+  }
+  // partner requirement select
+  const list = await getRequirements();
+  const sel = $('npReq');
+  sel.innerHTML = '';
+  for (const r of list) {
+    const o = document.createElement('option');
+    o.value = r.id;
+    o.textContent = r.title;
+    sel.appendChild(o);
+  }
+  renderPartnerList();
+}
+
+async function connectPairing() {
+  const code = $('pairCode').value.trim();
+  if (!code) { toast('Paste the pairing code from your partner.'); return; }
+  try {
+    const data = await api('/api/requirement?code=' + encodeURIComponent(code));
+    const req = data.requirement;
+    if (!validateRequirement(req)) throw new Error('server returned an invalid requirement');
+    if (!req.id) req.id = 'paired-' + data.pairId;
+    await idb.put('requirements', req);
+    const reqHash = await requirementHash(req);
+    localStorage.setItem('ra_pairing', JSON.stringify({
+      code, pairId: data.pairId, name: data.name, reqId: req.id, reqTitle: req.title, reqHash
+    }));
+    await renderReqSelect(); await renderReqList();
+    $('reqSelect').value = req.id;
+    await renderReqDetail();
+    $('pairCode').value = '';
+    toast(`Connected to "${data.name}" — requirement imported.`);
+    refreshHosted();
+  } catch (e) {
+    toast('Could not connect: ' + e.message);
+  }
+}
+
+function disconnectPairing() {
+  if (!confirm('Disconnect from this partner? Future sessions will no longer be delivered automatically.')) return;
+  localStorage.removeItem('ra_pairing');
+  refreshHosted();
+  renderHistory();
+}
+
+async function createPairing() {
+  const list = await getRequirements();
+  const req = list.find(r => r.id === $('npReq').value);
+  if (!req) { toast('Create a requirement first (Requirements tab).'); return; }
+  try {
+    const data = await api('/api/pairings', {
+      method: 'POST',
+      body: { name: $('npName').value.trim() || req.title, requirement: req, webhookUrl: $('npWebhook').value.trim() || undefined }
+    });
+    const mine = partnerPairings();
+    mine.unshift({ pairId: data.pairId, key: data.partnerKey, name: data.name, base: hostedBase() });
+    savePartnerPairings(mine);
+    $('npName').value = ''; $('npWebhook').value = '';
+    $('newPairResult').innerHTML =
+      `<div class="req-detail"><strong>Pairing created.</strong> Send this code to the participant (they paste it in their app's Hosted tab):<br>` +
+      `<span class="mono" style="word-break:break-all">${esc(data.participantCode)}</span></div>`;
+    renderPartnerList();
+  } catch (e) {
+    toast('Could not create pairing: ' + e.message);
+  }
+}
+
+async function renderPartnerList() {
+  const box = $('partnerList');
+  const mine = partnerPairings();
+  box.innerHTML = '';
+  if (!mine.length) { box.innerHTML = '<div class="empty">No pairings on this device yet.</div>'; return; }
+  for (const entry of mine) {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<div class="toprow"><span class="name">${esc(entry.name)}</span><span class="meta mono">${esc(entry.pairId)}</span></div>` +
+      `<div class="meta" id="inbox-${esc(entry.pairId)}" style="margin-top:8px">Loading inbox…</div>`;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const forget = document.createElement('button');
+    forget.className = 'btn small danger';
+    forget.textContent = 'Forget';
+    forget.onclick = () => {
+      if (!confirm('Forget this pairing on this device? (It stays on the server; you would need the keys to access it again.)')) return;
+      savePartnerPairings(partnerPairings().filter(x => x.pairId !== entry.pairId));
+      renderPartnerList();
+    };
+    actions.append(forget);
+    el.appendChild(actions);
+    box.appendChild(el);
+    loadInbox(entry, el.querySelector(`[id="inbox-${entry.pairId}"]`));
+  }
+}
+
+async function loadInbox(entry, slot) {
+  try {
+    const data = await api(`/api/pairings/${encodeURIComponent(entry.pairId)}?key=${encodeURIComponent(entry.key)}`);
+    if (!data.inbox.length) { slot.textContent = 'Inbox empty — no sessions delivered yet.'; return; }
+    slot.innerHTML = '';
+    for (const item of data.inbox) {
+      const row = document.createElement('div');
+      row.className = 'item';
+      row.style.marginTop = '8px';
+      const delivered = item.status === 'delivered';
+      row.innerHTML =
+        `<div class="toprow"><span class="badge ${item.valid ? 'valid' : 'invalid'}">${item.valid ? 'Valid' : 'Rejected'}</span>` +
+        `<span class="badge ${delivered ? 'valid' : ''}">${delivered ? 'Delivered' : 'Seal only'}</span>` +
+        `<span class="name mono" style="font-size:12px">${esc(item.sessionId)}</span>` +
+        `<span class="meta">${delivered ? fmtSize(item.size) : ''}</span></div>` +
+        `<div class="meta" style="margin-top:6px">seal <span class="mono">${esc(item.sealCode)}</span>` +
+        (item.registeredAt ? ` · sealed ${esc(new Date(item.registeredAt).toLocaleString())}` : '') +
+        (item.uploadedAt ? ` · delivered ${esc(new Date(item.uploadedAt).toLocaleString())}` : '') + `</div>` +
+        (!item.valid && (item.reasons || []).length ? `<div class="meta" style="margin-top:4px">${item.reasons.map(esc).join(' · ')}</div>` : '') +
+        (!delivered ? `<div class="meta" style="margin-top:4px">Seal was registered but the packet never arrived — an abandoned or failed upload.</div>` : '');
+      if (delivered) {
+        const acts = document.createElement('div');
+        acts.className = 'actions';
+        const vfy = document.createElement('button');
+        vfy.className = 'btn small green';
+        vfy.textContent = 'Verify now';
+        vfy.onclick = () => verifyFromInbox(entry, item);
+        const dl = document.createElement('button');
+        dl.className = 'btn small';
+        dl.textContent = 'Download';
+        dl.onclick = () => {
+          const a = document.createElement('a');
+          a.href = `${hostedBase()}/api/packets/${encodeURIComponent(item.sessionId)}?pairId=${encodeURIComponent(entry.pairId)}&key=${encodeURIComponent(entry.key)}`;
+          a.download = item.filename || 'packet.zip';
+          a.click();
+        };
+        acts.append(vfy, dl);
+        row.appendChild(acts);
+      }
+      slot.appendChild(row);
+    }
+  } catch (e) {
+    slot.textContent = 'Could not load inbox: ' + e.message;
+  }
+}
+
+async function verifyFromInbox(entry, item) {
+  try {
+    toast('Fetching packet…');
+    const res = await fetch(`${hostedBase()}/api/packets/${encodeURIComponent(item.sessionId)}?pairId=${encodeURIComponent(entry.pairId)}&key=${encodeURIComponent(entry.key)}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    // the server-witnessed seal code plays the out-of-band role automatically
+    $('sealInput').value = item.sealCode;
+    document.querySelector('nav.tabs button[data-tab="verify"]').click();
+    await verifyPacket(blob);
+  } catch (e) {
+    toast('Could not fetch packet: ' + e.message);
+  }
+}
+
+async function deliverPacket(rec, statusEl) {
+  const pairing = participantPairing();
+  if (!pairing) return { ok: false, msg: 'not paired with a partner' };
+  if (hostedBase() === null) return { ok: false, msg: 'no server configured' };
+  const report = msg => { if (statusEl) statusEl.innerHTML = msg; };
+  let lastErr = '';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      report(`Registering seal with server (attempt ${attempt})…`);
+      const r1 = await api('/api/seals', {
+        method: 'POST',
+        body: { code: pairing.code, sessionId: rec.id, sealCode: rec.sealCode, seal: rec.seal, valid: rec.valid, reasons: rec.reasons }
+      });
+      report('Seal registered · uploading packet…');
+      const res = await fetch(`${hostedBase()}/api/packets/${encodeURIComponent(rec.id)}?code=${encodeURIComponent(pairing.code)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/zip', 'X-Filename': rec.filename },
+        body: rec.blob
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      rec.delivered = true;
+      rec.deliveredAt = Date.now();
+      await idb.put('packets', rec);
+      report(`✅ <strong>Delivered automatically to "${esc(pairing.name)}".</strong><br>` +
+        `<span class="kv">Seal witnessed by server at ${esc(new Date(r1.registeredAt).toLocaleString())} · packet in partner inbox. No manual steps needed.</span>`);
+      return { ok: true, registeredAt: r1.registeredAt };
+    } catch (e) {
+      lastErr = e.message;
+      report(`Delivery attempt ${attempt} failed (${esc(lastErr)})…`);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
+    }
+  }
+  report(`❌ <strong>Automatic delivery failed:</strong> ${esc(lastErr)}.<br><span class="kv">The packet is safe in History — retry from there, or deliver it manually with Download / Share and text the seal code to your partner.</span>`);
+  return { ok: false, msg: lastErr };
+}
+
+function autoDeliver(rec) {
+  const statusEl = $('deliveryStatus');
+  if (!participantPairing() || hostedBase() === null) {
+    statusEl.classList.add('hidden');
+    return;
+  }
+  statusEl.classList.remove('hidden');
+  deliverPacket(rec, statusEl).then(() => renderHistory());
+}
+
+$('btnSaveServer').addEventListener('click', async () => {
+  localStorage.setItem('ra_server_url', $('serverUrl').value.trim());
+  await refreshHosted();
+});
+$('btnConnectPair').addEventListener('click', connectPairing);
+$('btnDisconnectPair').addEventListener('click', disconnectPairing);
+$('btnCreatePair').addEventListener('click', createPairing);
 
 (async function init() {
   db = await openDB();

@@ -2,7 +2,12 @@
 
 A **guided evidence-capture and validation system**: it converts an accountability requirement into a controlled, continuous, tamper-evident recording workflow, tells the participant exactly what to do, verifies the required conditions stay satisfied, rejects invalid sessions, and produces a sealed verification packet for the Accountability Partner.
 
-The entire system is one file — `index.html`. Download it, double-click it, and it runs in your browser. No install, no server, no account. Both the participant **and** the partner use the same file (the partner uses the *Verify Packet* tab).
+The system runs in two modes:
+
+- **Offline** — one file, `index.html`. Download it, double-click it, done. Delivery is manual (download/share the packet, text the seal code).
+- **Hosted** — add `server.js` (zero dependencies, `node server.js`) for **automatic delivery**: pairing codes, server-witnessed seal timestamps, a partner inbox the packets upload into on their own, and optional webhook notifications.
+
+Both the participant **and** the partner use the same app (the partner uses the *Verify Packet* and *Hosted* tabs).
 
 ## How it works
 
@@ -52,21 +57,57 @@ Deliver it by download or the device share sheet (email, drive, messaging). The 
 
 It then shows a full pass/fail report, the recording, the snapshots, and the complete event timeline.
 
-## Usage
+## Usage — offline mode
 
 1. Download `index.html` and open it (Chrome or Edge recommended; Firefox/Safari also work).
 2. **Partner:** create the requirement in the *Requirements* tab → *Export* → send the JSON to the participant. Keep a copy.
 3. **Participant:** *Import* the requirement → *Record Session* → follow the steps → at completion, **immediately text the seal code to the partner**, then deliver the packet zip.
 4. **Partner:** *Verify Packet* → enter the seal code you received → drop the zip in → read the report.
 
+## Usage — hosted mode (automatic delivery)
+
+### Run the server
+
+```bash
+node server.js          # Node 18+, zero dependencies, nothing to install
+# → http://localhost:8787
+```
+
+Configuration via environment: `PORT` (default 8787), `DATA_DIR` (default `./data` — holds pairings, seals, and delivered packets; survives restarts). Deploy the two files (`server.js`, `index.html`) to any Node host — Render, Railway, Fly, a VPS — and put it behind HTTPS. The app is served by the server itself, so everyone just opens the URL. (An `index.html` opened as a local file can also point at a remote server via the *Hosted* tab's Server URL field.)
+
+### Flow
+
+1. **Partner:** open the app from the server → *Hosted* tab → *Create a pairing* (pick the requirement, optionally set a webhook URL for Slack/Discord/Zapier notifications) → send the generated **pairing code** to the participant.
+2. **Participant:** *Hosted* tab → paste the pairing code → *Connect*. The requirement imports automatically.
+3. **Participant:** run sessions normally. At completion the app **automatically registers the seal with the server** (a trusted timestamp, replacing the text-the-code step) **and uploads the packet to the partner's inbox**, with retries; failed deliveries can be retried from *History*.
+4. **Partner:** *Hosted* tab shows each pairing's inbox — every session with its seal-registration time, delivery time, and claimed verdict. One click on **Verify now** fetches the packet, auto-fills the server-witnessed seal code, and runs the full integrity verification.
+
+### What hosting adds, precisely
+
+- **Automatic delivery** — no manual download/share/text steps; the packet lands in the partner's inbox the moment the session completes, and a webhook can announce it.
+- **A trusted timestamp witness** — the server records the seal (with an HMAC receipt) the instant the session completes and refuses to ever change it; a packet upload is only accepted if it matches a registered seal, and both are immutable per session. This closes the offline mode's main gap: a participant can no longer discard an attempt and quietly re-record before "sending the code", because the first seal for a session is on the record with a server timestamp — and gaps (seals with no packet, long delays between sealing and delivery) are visible to the partner.
+- **Auth by capability keys** — the pairing code authorizes only the participant actions (fetch requirement, register seal, upload packet); the partner key authorizes only reading the inbox and downloading packets. No accounts or passwords to manage.
+
+### API surface (for integrations)
+
+| Endpoint | Who | Purpose |
+|---|---|---|
+| `POST /api/pairings` | partner | create pairing (requirement + optional webhook) |
+| `GET /api/pairings/:id?key=` | partner | pairing info + inbox |
+| `GET /api/requirement?code=` | participant | fetch the paired requirement |
+| `POST /api/seals` | participant | register a session seal (immutable, timestamped, HMAC receipt) |
+| `PUT /api/packets/:sessionId?code=` | participant | upload the packet zip (requires registered seal; immutable) |
+| `GET /api/packets/:sessionId?pairId=&key=` | partner | download a delivered packet |
+
 ## Honest limitations
 
-This is a client-side tool with no server and no shared secret, so its guarantees are precise but bounded:
+The guarantees are precise but bounded:
 
-- **What it proves:** the delivered bytes are exactly what was captured, in one continuous take, under the logged conditions, with the logged violations — and (via the out-of-band seal code) that the packet wasn't re-recorded or rebuilt after the seal code was sent.
-- **What it can't prove:** who is on camera, or what's happening off-camera. A determined participant could point the camera at a screen, or complete an entire fresh session before sending a seal code. The requirement's steps (state name/date aloud, pan surroundings, one-take confirmation) are the mitigation for this — design them accordingly.
+- **What it proves:** the delivered bytes are exactly what was captured, in one continuous take, under the logged conditions, with the logged violations — and that the packet wasn't rebuilt after sealing (offline: via the out-of-band seal code; hosted: via the server-witnessed, immutable seal record).
+- **What it can't prove:** who is on camera, or what's happening off-camera. A determined participant could point the camera at a screen. The requirement's steps (state name/date aloud, pan surroundings, one-take confirmation) are the mitigation — design them accordingly. Hosted mode makes discard-and-redo *visible* (abandoned seals and delays appear in the inbox) but the partner still needs to look.
+- The server is a *timing witness and courier*, not an identity authority: anyone holding the pairing code can submit sessions. Share codes over a private channel.
 - It is not a substitute for professional court-ordered monitoring systems where those are required.
 
 ## Development
 
-No build step — edit `index.html` and refresh. Logic tests for the crypto, zip format, hash chain, and verdict engine live in the session scratchpad (`test.js`) and run under Node.
+No build step — edit `index.html` / `server.js` and refresh/restart. Test suites (crypto, zip format, hash chain, verdict engine, and a full server integration flow) run under plain Node.
