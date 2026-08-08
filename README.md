@@ -26,6 +26,7 @@ Two session types:
 - **position checking**: every frame is compared against the locked reference view; leaving the position beyond the allowed seconds invalidates. The comparison is mean-centered so lighting/exposure drift doesn't count as movement
 - motion and deviation scores are sampled into the tamper-evident event log every 5s, and the verify report renders them as a **movement/position timeline** with the violation thresholds drawn in
 - hashed snapshots are taken frequently (default every 15s) so the partner can visually confirm the pose in seconds
+- **AI pose verification (optional)**: a requirement can additionally demand specific postures, verified continuously with the MoveNet pose model running entirely on the participant's device — **facing away from the camera (into the corner)**, **standing**, **kneeling**, and/or **hands on head**. Each pose gets a grace period (default 5s) before a lapse becomes a violation; pose pass/fail is sampled into the sealed event log every 5s, and the verify report shows a per-pose green/red strip with % held. If pose verification is required and the model cannot load, the session is invalid — it can't be bypassed by blocking the model.
 
 In both types, recording is **continuous — there is no pause**. While recording, the app live-monitors:
 
@@ -85,7 +86,7 @@ node server.js          # Node 18+, zero dependencies, nothing to install
 # → http://localhost:8787
 ```
 
-Configuration via environment: `PORT` (default 8787), `DATA_DIR` (default `./data` — holds pairings, seals, and delivered packets; survives restarts). Deploy the two files (`server.js`, `index.html`) to any Node host — Render, Railway, Fly, a VPS — and put it behind HTTPS. The app is served by the server itself, so everyone just opens the URL. (An `index.html` opened as a local file can also point at a remote server via the *Hosted* tab's Server URL field.)
+Configuration via environment: `PORT` (default 8787), `DATA_DIR` (default `./data` — holds pairings, seals, and delivered packets; survives restarts). Deploy `server.js`, `index.html`, and the `vendor/` directory (bundled TF.js + MoveNet pose model, ~6 MB, so pose verification works offline) to any Node host — Render, Railway, Fly, a VPS — and put it behind HTTPS. The app is served by the server itself, so everyone just opens the URL. (An `index.html` opened as a local file can also point at a remote server via the *Hosted* tab's Server URL field.)
 
 ### Flow
 
@@ -117,7 +118,8 @@ The guarantees are precise but bounded:
 
 - **What it proves:** the delivered bytes are exactly what was captured, in one continuous take, under the logged conditions, with the logged violations — and that the packet wasn't rebuilt after sealing (offline: via the out-of-band seal code; hosted: via the server-witnessed, immutable seal record).
 - **What it can't prove:** who is on camera, or what's happening off-camera. A determined participant could point the camera at a screen. The requirement's steps (state name/date aloud, pan surroundings, one-take confirmation) are the mitigation — design them accordingly. Hosted mode makes discard-and-redo *visible* (abandoned seals and delays appear in the inbox) but the partner still needs to look.
-- **Movement/position checking is pixel-based, not skeletal.** It reliably detects motion, stillness, and leaving a locked position, but it is not ML pose estimation — it cannot verify a *specific* posture ("hands on head") automatically. The frequent hashed snapshots are the pose check: the partner can visually confirm the posture across the whole hold in a few seconds, and the snapshots are tamper-evident.
+- **Pose verification is a heuristic on top of an ML model.** MoveNet keypoint estimation is good but not perfect — poor lighting, unusual camera angles, or partial occlusion can cause misses, which is why each pose has a grace period and why the hashed snapshots remain the authoritative visual record. The pose rules (standing/kneeling/hands-on-head/facing-away) are geometric heuristics over the 17 detected keypoints, not a certified biometric system.
+- **The pose model needs to load from somewhere.** Served by `server.js`, the model is bundled (`vendor/`) and works fully offline. Opened as a bare local file, the app falls back to loading TF.js and the model from the internet (jsDelivr/TFHub); no video ever leaves the device either way — inference is 100% local.
 - The server is a *timing witness and courier*, not an identity authority: anyone holding the pairing code can submit sessions. Share codes over a private channel.
 - It is not a substitute for professional court-ordered monitoring systems where those are required.
 

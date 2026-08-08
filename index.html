@@ -239,6 +239,7 @@
           </div>
           <button class="btn primary" id="btnLock">Lock position — start hold</button>
         </div>
+        <div class="kv hidden" id="poseStatus" style="margin-top:8px;font-size:13px"></div>
       </div>
       <h3>Follow each step, then mark it done</h3>
       <div class="steps" id="stepsList"></div>
@@ -324,6 +325,13 @@
         <label class="chk">Allowed continuous movement <input type="number" id="nrMoveCont" value="3" min="1"> seconds at a time</label>
         <label class="chk">Leaving the locked position for more than <input type="number" id="nrLeave" value="5" min="2"> seconds → invalid</label>
         <label class="chk">Hashed camera snapshot every <input type="number" id="nrSnapInt" value="15" min="5"> seconds (lets the partner visually confirm the pose)</label>
+        <h3>AI pose verification (optional)</h3>
+        <p class="hint">Continuously verifies the posture itself using the MoveNet pose model (runs entirely on the participant's device; loads from the app's bundled files when served by <span class="mono">server.js</span>, otherwise from the internet). If required and the model cannot load, the session is invalid. Snapshots always remain the visual fallback.</p>
+        <label class="chk"><input type="checkbox" id="nrPoseAway"> Must face away from the camera (into the corner)</label>
+        <label class="chk"><input type="checkbox" id="nrPoseStanding"> Must remain standing</label>
+        <label class="chk"><input type="checkbox" id="nrPoseKneeling"> Must remain kneeling</label>
+        <label class="chk"><input type="checkbox" id="nrPoseHands"> Hands must stay on head</label>
+        <label class="chk">Pose grace period <input type="number" id="nrPoseGrace" value="5" min="2"> seconds before a lapse becomes a violation</label>
       </div>
       <label class="fld">Steps — one per line, in order</label>
       <textarea id="nrSteps" rows="4" placeholder="State your name and today's date&#10;Show the item clearly on camera&#10;Complete the required action on camera"></textarea>
@@ -680,15 +688,15 @@ const SAMPLE_REQ = {
 const SAMPLE_HOLD = {
   id: 'sample-position-hold',
   version: 1,
-  title: 'Sample: Position hold (corner time)',
-  description: 'Lock a position in full view of the camera and hold it — stillness and staying in position are verified continuously, with hashed snapshots for visual review.',
+  title: 'Sample: Corner time (position hold)',
+  description: 'Stand facing into the corner, lock the position, and hold it — stillness, staying in position, and the pose itself (standing, facing away) are verified continuously, with hashed snapshots for visual review.',
   sessionType: 'hold',
   media: 'video',
   minDurationSec: 300,
   steps: [
     'State your full name and the assigned hold duration out loud',
-    'Position the camera so your entire position is clearly visible',
-    'Get into position and press "Lock position" to start the hold'
+    'Position the camera so your whole body and the corner are clearly visible',
+    'Stand facing into the corner, then press "Lock position" to start the hold'
   ],
   rules: {
     invalidateOnHide: true, maxHiddenSec: 15,
@@ -696,7 +704,8 @@ const SAMPLE_HOLD = {
     invalidateOnSilence: false, maxSilenceSec: 60,
     requireAllSteps: true,
     maxMoveTotalSec: 15, maxMoveContinuousSec: 3,
-    leavePositionSec: 5, snapshotIntervalSec: 15
+    leavePositionSec: 5, snapshotIntervalSec: 15,
+    poseChecks: ['standing', 'facing_away'], poseGraceSec: 5
   },
   createdAt: '2026-01-01T00:00:00.000Z'
 };
@@ -733,6 +742,8 @@ function describeRules(r) {
     out.push(`Movement budget ${r.rules.maxMoveTotalSec || 15}s total, max ${r.rules.maxMoveContinuousSec || 3}s continuous`);
     out.push(`Leaving the locked position > ${r.rules.leavePositionSec || 5}s → invalid`);
     out.push(`Snapshot every ${r.rules.snapshotIntervalSec || 15}s for visual pose review`);
+    if ((r.rules.poseChecks || []).length)
+      out.push(`AI pose verification: ${r.rules.poseChecks.map(p => POSE_LABELS[p] || p).join(', ')} (grace ${r.rules.poseGraceSec || 5}s)`);
   } else {
     out.push(`Minimum duration: ${fmtTime(r.minDurationSec)}`);
   }
@@ -833,6 +844,14 @@ async function saveNewRequirement() {
   if (!title) { toast('Give the requirement a title.'); return; }
   if (!steps.length) { toast('Add at least one step.'); return; }
   if (sessionType === 'hold' && $('nrMedia').value !== 'video') { toast('Position holds need video — the camera is what verifies the hold.'); return; }
+  const poseChecks = [];
+  if (sessionType === 'hold') {
+    if ($('nrPoseAway').checked) poseChecks.push('facing_away');
+    if ($('nrPoseStanding').checked) poseChecks.push('standing');
+    if ($('nrPoseKneeling').checked) poseChecks.push('kneeling');
+    if ($('nrPoseHands').checked) poseChecks.push('hands_on_head');
+    if (poseChecks.includes('standing') && poseChecks.includes('kneeling')) { toast('Standing and kneeling are mutually exclusive — pick one.'); return; }
+  }
   const req = {
     id: uid(),
     version: 1,
@@ -853,7 +872,9 @@ async function saveNewRequirement() {
       maxMoveTotalSec: Math.max(1, parseInt($('nrMoveTotal').value) || 15),
       maxMoveContinuousSec: Math.max(1, parseInt($('nrMoveCont').value) || 3),
       leavePositionSec: Math.max(2, parseInt($('nrLeave').value) || 5),
-      snapshotIntervalSec: Math.max(5, parseInt($('nrSnapInt').value) || (sessionType === 'hold' ? 15 : 30))
+      snapshotIntervalSec: Math.max(5, parseInt($('nrSnapInt').value) || (sessionType === 'hold' ? 15 : 30)),
+      poseChecks,
+      poseGraceSec: Math.max(2, parseInt($('nrPoseGrace').value) || 5)
     },
     createdAt: new Date().toISOString()
   };
@@ -873,7 +894,16 @@ const VIOLATION_TEXT = {
   track_ended: 'Microphone or camera disconnected during the session',
   recorder_error: 'The recording engine reported an error mid-session',
   excessive_movement: 'Movement exceeded the allowed budget during the position hold',
-  left_position: 'The locked position was left during the hold'
+  left_position: 'The locked position was left during the hold',
+  pose_violation: 'A required pose was not maintained',
+  pose_unavailable: 'Pose verification was required but the pose model could not run'
+};
+
+const POSE_LABELS = {
+  standing: 'Standing',
+  kneeling: 'Kneeling',
+  hands_on_head: 'Hands on head',
+  facing_away: 'Facing away from camera'
 };
 
 function computeVerdict(events, req, durationMs) {
@@ -892,8 +922,16 @@ function computeVerdict(events, req, durationMs) {
   } else if (durationMs < req.minDurationSec * 1000) {
     reasons.push(`Recording (${fmtTime(durationMs / 1000)}) is shorter than the required minimum (${fmtTime(req.minDurationSec)})`);
   }
-  const codes = [...new Set(events.filter(e => e.type === 'violation').map(e => e.detail && e.detail.code))];
-  for (const c of codes) reasons.push(VIOLATION_TEXT[c] || ('Rule violation: ' + c));
+  const seen = new Set();
+  for (const e of events.filter(x => x.type === 'violation')) {
+    const code = e.detail && e.detail.code;
+    const rule = e.detail && e.detail.rule;
+    const k = code + (rule ? ':' + rule : '');
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (code === 'pose_violation') reasons.push(`Required pose "${POSE_LABELS[rule] || rule}" was not maintained`);
+    else reasons.push(VIOLATION_TEXT[code] || ('Rule violation: ' + code));
+  }
   if (req.rules.requireAllSteps) {
     const acks = events.filter(e => e.type === 'step_ack').length;
     if (acks < req.steps.length)
@@ -917,9 +955,10 @@ function logEvent(type, detail) {
     detail: detail || null
   });
 }
-function logViolation(code, extra) {
-  if (S.flagged.has(code)) return; // one violation event per condition occurrence type
-  S.flagged.add(code);
+function logViolation(code, extra, key) {
+  const k = key || code;
+  if (S.flagged.has(k)) return; // one violation event per condition occurrence type
+  S.flagged.add(k);
   logEvent('violation', Object.assign({ code }, extra || {}));
   toast('⚠️ Rule violated — this session will be INVALID: ' + (VIOLATION_TEXT[code] || code));
 }
@@ -981,6 +1020,9 @@ async function startSession() {
     hold: req.sessionType === 'hold'
       ? { locked: false, lockT: 0, ref: null, prev: null, moveMs: 0, moveStart: null, devStart: null, lastSample: 0 }
       : null,
+    poseTrack: {},
+    poseBusy: false,
+    poseLastSample: 0,
     finalized: false,
     aborted: false
   };
@@ -1070,6 +1112,29 @@ async function startSession() {
   S.intervals.push(setInterval(tickTimer, 250));
   S.intervals.push(setInterval(tickMonitor, 500));
   S.intervals.push(setInterval(tickClock, 10000));
+
+  // AI pose verification, if the requirement demands it
+  const poseChecks = req.rules.poseChecks || [];
+  if (S.hold && poseChecks.length) {
+    $('poseStatus').classList.remove('hidden');
+    $('poseStatus').style.color = '';
+    $('poseStatus').textContent = 'Loading pose model… (' + poseChecks.map(r => POSE_LABELS[r] || r).join(', ') + ')';
+    ensurePoseEngine().then(() => {
+      if (S && !S.finalized) {
+        logEvent('pose_engine_ready');
+        $('poseStatus').textContent = 'Pose model ready — checks begin when you lock your position.';
+      }
+    }).catch(e => {
+      if (S && !S.finalized) {
+        logViolation('pose_unavailable', { error: String(e && e.message || e).slice(0, 120) });
+        $('poseStatus').style.color = 'var(--accent)';
+        $('poseStatus').textContent = 'Pose model could not load — this session will be INVALID (pose verification is required).';
+      }
+    });
+    S.intervals.push(setInterval(runPoseCheck, 700));
+  } else {
+    $('poseStatus').classList.add('hidden');
+  }
 }
 
 function renderSteps() {
@@ -1290,6 +1355,137 @@ function lockPosition() {
   $('holdState').textContent = 'Hold in progress — stay still, stay in position.';
   updateCompleteBtn();
   toast('Position locked — hold timer started.');
+}
+
+/* ---- AI pose verification (MoveNet SinglePose Lightning, run directly
+   via TF.js — vendored files first, CDN/TFHub fallback) ---- */
+let poseModel = null, poseLoadPromise = null;
+const POSE_TF_CDN = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
+const POSE_MODEL_TFHUB = 'https://tfhub.dev/google/tfjs-model/movenet/singlepose/lightning/4';
+const POSE_MIN_CONF = 0.3;
+
+function loadScriptTag(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('could not load ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function ensurePoseEngine() {
+  if (poseModel) return poseModel;
+  if (!poseLoadPromise) {
+    poseLoadPromise = (async () => {
+      if (!window.tf) {
+        try { await loadScriptTag('vendor/tf.min.js'); }
+        catch (e) { await loadScriptTag(POSE_TF_CDN); }
+      }
+      await tf.ready();
+      try { poseModel = await tf.loadGraphModel('vendor/movenet/movenet-lightning.json'); }
+      catch (e) { poseModel = await tf.loadGraphModel(POSE_MODEL_TFHUB, { fromTFHub: true }); }
+      tf.tidy(() => poseModel.execute(tf.zeros([1, 192, 192, 3], 'int32'))); // warm-up
+      return poseModel;
+    })();
+    poseLoadPromise.catch(() => { poseLoadPromise = null; });
+  }
+  return poseLoadPromise;
+}
+
+async function estimateKeypoints(video) {
+  // MoveNet: int32 [1,192,192,3] in → [1,1,17,3] out, rows are (y, x, score)
+  const out = tf.tidy(() => {
+    const img = tf.browser.fromPixels(video);
+    const input = tf.image.resizeBilinear(img.toFloat(), [192, 192]).toInt().expandDims(0);
+    return poseModel.execute(input).reshape([17, 3]);
+  });
+  const arr = await out.array();
+  out.dispose();
+  const vw = video.videoWidth, vh = video.videoHeight;
+  return arr.map(r => ({ y: r[0] * vh, x: r[1] * vw, score: r[2] }));
+}
+
+/* COCO-17 keypoints: 0 nose 1/2 eyes 3/4 ears 5/6 shoulders 7/8 elbows
+   9/10 wrists 11/12 hips 13/14 knees 15/16 ankles. All thresholds are
+   relative to torso length, so image scale does not matter. */
+function evalPoseRules(kps, minConf) {
+  const c = minConf || POSE_MIN_CONF;
+  const ok = i => kps[i] && kps[i].score >= c;
+  const pt = i => kps[i];
+  const mid = (a, b) => ok(a) && ok(b)
+    ? { x: (pt(a).x + pt(b).x) / 2, y: (pt(a).y + pt(b).y) / 2 }
+    : (ok(a) ? { x: pt(a).x, y: pt(a).y } : (ok(b) ? { x: pt(b).x, y: pt(b).y } : null));
+
+  const shoulder = mid(5, 6), hip = mid(11, 12), knee = mid(13, 14), ankle = mid(15, 16);
+  const torso = shoulder && hip ? Math.hypot(hip.x - shoulder.x, hip.y - shoulder.y) : 0;
+  const detected = !!(shoulder && hip) && torso > 1;
+  const upright = detected && shoulder.y < hip.y && Math.abs(shoulder.x - hip.x) < 0.6 * torso;
+
+  let standing = false, kneeling = false, hands_on_head = false, facing_away = false;
+  if (detected) {
+    standing = upright && !!knee && hip.y < knee.y &&
+      (ankle ? (ankle.y - hip.y) > 1.15 * torso : (knee.y - hip.y) > 0.55 * torso);
+
+    // kneeling: shin flat on the ground → ankle at roughly knee height
+    kneeling = upright && !!knee && hip.y <= knee.y + 0.2 * torso &&
+      (ankle ? Math.abs(ankle.y - knee.y) < 0.35 * torso : hip.y < knee.y);
+
+    // head reference: highest confident head keypoint, else estimated from shoulders
+    let headY = null;
+    for (const i of [0, 1, 2, 3, 4]) if (ok(i)) headY = headY === null ? pt(i).y : Math.min(headY, pt(i).y);
+    if (headY === null) headY = shoulder.y - 0.6 * torso;
+    hands_on_head = ok(9) && ok(10) &&
+      pt(9).y <= headY + 0.25 * torso && pt(10).y <= headY + 0.25 * torso;
+
+    // facing away: face landmarks invisible while both shoulders are clearly seen
+    facing_away = kps[5] && kps[6] && kps[5].score >= c && kps[6].score >= c &&
+      (!kps[0] || kps[0].score < 0.25) && (!kps[1] || kps[1].score < 0.25) && (!kps[2] || kps[2].score < 0.25);
+  }
+  return { detected, standing, kneeling, hands_on_head, facing_away };
+}
+
+async function runPoseCheck() {
+  if (!S || S.finalized || !S.hold || !S.hold.locked || !poseModel || S.poseBusy) return;
+  const v = $('preview');
+  if (!v.videoWidth) return;
+  S.poseBusy = true;
+  try {
+    const kps = await estimateKeypoints(v);
+    if (!S || S.finalized) return;
+    const res = evalPoseRules(kps, POSE_MIN_CONF);
+    const now = performance.now();
+    const checks = S.req.rules.poseChecks || [];
+    const grace = S.req.rules.poseGraceSec || 5;
+    const parts = [];
+    for (const rule of checks) {
+      const pass = !!(res.detected && res[rule]);
+      const tr = S.poseTrack[rule] || (S.poseTrack[rule] = { failStart: null });
+      if (!pass) {
+        if (tr.failStart === null) { tr.failStart = now; logEvent('pose_fail_start', { rule }); }
+        if ((now - tr.failStart) / 1000 > grace)
+          logViolation('pose_violation', { rule }, 'pose_violation:' + rule);
+      } else if (tr.failStart !== null) {
+        logEvent('pose_fail_end', { rule, seconds: Math.round((now - tr.failStart) / 1000) });
+        tr.failStart = null;
+      }
+      parts.push(`${POSE_LABELS[rule] || rule} ${pass ? '✓' : '✗'}`);
+    }
+    if (now - S.poseLastSample > 5000) {
+      S.poseLastSample = now;
+      const p = {};
+      for (const r of checks) p[r] = res.detected && res[r] ? 1 : 0;
+      logEvent('pose_sample', { p });
+    }
+    const failing = parts.some(s => s.endsWith('✗'));
+    $('poseStatus').innerHTML = (res.detected ? '' : '<span style="color:var(--accent)">No person detected</span> · ') +
+      'Pose: ' + parts.map(esc).join(' · ');
+    $('poseStatus').style.color = failing || !res.detected ? 'var(--accent)' : 'var(--green)';
+  } catch (e) {
+    // transient inference errors are non-fatal; pixel checks continue regardless
+  } finally {
+    S.poseBusy = false;
+  }
 }
 
 function takeSnapshot(v) {
@@ -1736,6 +1932,24 @@ function renderVerifyReport(manifest, checks, mediaBytes, files) {
         `<polyline points="${line('m')}" fill="none" stroke="var(--accent)" stroke-width="1.4"/>` +
         `<polyline points="${line('d')}" fill="none" stroke="var(--blue)" stroke-width="1.4"/>` +
         `</svg>`;
+
+      // AI pose verification strips (green = pose held, red = pose lapsed)
+      const poseSamples = manifest.events.filter(e => e.type === 'pose_sample' && e.detail && e.detail.p);
+      if (poseSamples.length) {
+        const rules = [...new Set(poseSamples.flatMap(s => Object.keys(s.detail.p)))];
+        let stripsHtml = '<h3 style="margin-top:14px">AI pose verification (5s samples)</h3>';
+        for (const rule of rules) {
+          const cells = poseSamples.map(s =>
+            `<i style="flex:1;background:${s.detail.p[rule] ? 'var(--green)' : 'var(--accent)'}"></i>`).join('');
+          const held = poseSamples.filter(s => s.detail.p[rule]).length;
+          stripsHtml +=
+            `<div style="display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12.5px">` +
+            `<span style="width:170px;flex:none">${esc(POSE_LABELS[rule] || rule)}</span>` +
+            `<span style="display:flex;flex:1;height:12px;border-radius:4px;overflow:hidden">${cells}</span>` +
+            `<span class="kv" style="flex:none">${Math.round(100 * held / poseSamples.length)}% held</span></div>`;
+        }
+        mvCard.insertAdjacentHTML('beforeend', stripsHtml);
+      }
       report.appendChild(mvCard);
     }
 

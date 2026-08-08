@@ -152,6 +152,23 @@ const server = http.createServer(async (req, res) => {
       res.end(html);
       return;
     }
+    // vendored pose model + TF.js (so pose verification works fully offline)
+    if (req.method === 'GET' && parts[0] === 'vendor') {
+      const base = path.join(__dirname, 'vendor');
+      const file = path.normalize(path.join(base, ...parts.slice(1)));
+      if (!file.startsWith(base + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        err(res, 404, 'not found');
+        return;
+      }
+      const types = { '.js': 'application/javascript', '.json': 'application/json', '.bin': 'application/octet-stream' };
+      res.writeHead(200, {
+        'Content-Type': types[path.extname(file)] || 'application/octet-stream',
+        'Content-Length': fs.statSync(file).size,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      fs.createReadStream(file).pipe(res);
+      return;
+    }
     if (parts[0] !== 'api') { err(res, 404, 'not found'); return; }
 
     // CORS — auth is capability-key based, no cookies, so wildcard is safe

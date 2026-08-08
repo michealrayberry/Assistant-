@@ -45,6 +45,14 @@ const REQ = {
     const idx = await fetch(BASE + '/');
     check('serves index.html', idx.ok && (await idx.text()).includes('Recording Assistant'));
 
+    // vendored pose model files served, traversal blocked
+    let r0 = await fetch(BASE + '/vendor/movenet/movenet-lightning.json');
+    check('serves vendored pose model manifest', r0.ok && (await r0.json()).format === 'graph-model');
+    r0 = await fetch(BASE + '/vendor/movenet/movenet-lightning.bin');
+    check('serves pose model weights', r0.ok && parseInt(r0.headers.get('content-length'), 10) > 1000000);
+    r0 = await fetch(BASE + '/vendor/..%2Fserver.js');
+    check('vendor path traversal blocked', !r0.ok);
+
     // partner creates pairing
     let r = await fetch(BASE + '/api/pairings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Test pairing', requirement: REQ }) });
     const pairing = await r.json();
