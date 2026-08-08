@@ -983,10 +983,15 @@ async function startSession() {
 
   let stream;
   try {
+    // Narration is produced by speechSynthesis and only exists as sound in the
+    // room; with echo cancellation / noise suppression / auto gain on, the
+    // browser treats it as speaker bleed and subtracts it, leaving a recording
+    // with no narration. All three MUST stay off. (brief §4)
+    const rawAudio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
     stream = await navigator.mediaDevices.getUserMedia(
       req.media === 'video'
-        ? { video: { width: { ideal: 640 }, facingMode: 'user' }, audio: { echoCancellation: true, noiseSuppression: true } }
-        : { audio: { echoCancellation: true, noiseSuppression: true } });
+        ? { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' }, audio: rawAudio }
+        : { audio: rawAudio });
   } catch (e) {
     toast('Camera/microphone access denied — the session cannot start.');
     return;
