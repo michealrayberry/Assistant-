@@ -94,6 +94,12 @@ function check(name, ok, extra) {
   check('hold verdict: left position invalid',
     computeVerdict([...holdBase, { type: 'violation', detail: { code: 'left_position' } }], holdReq, 66000).valid === false);
 
+  // ---- 4b1. no-narration verdict ----
+  const narrReq = { minDurationSec: 60, steps: [], rules: { requireAllSteps: false, requireAudibleAudio: true } };
+  const nv = computeVerdict([{ type: 'violation', detail: { code: 'no_narration', audibleMs: 0 } }, { type: 'session_complete' }], narrReq, 61000);
+  check('no-narration verdict: silent session invalid, reason mentions narration',
+    nv.valid === false && nv.reasons.some(r => /narration|audible/i.test(r)));
+
   // ---- 4b2. pose verdicts ----
   const poseReq = { sessionType: 'hold', minDurationSec: 60, steps: [], rules: { requireAllSteps: false, poseChecks: ['standing', 'facing_away'] } };
   const poseBase = [{ type: 'position_locked', t: 1000 }, { type: 'session_complete' }];

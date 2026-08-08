@@ -28,6 +28,10 @@ Two session types:
 - hashed snapshots are taken frequently (default every 15s) so the partner can visually confirm the pose in seconds
 - **AI pose verification (optional)**: a requirement can additionally demand specific postures, verified continuously with the MoveNet pose model running entirely on the participant's device — **facing away from the camera (into the corner)**, **standing**, **kneeling**, and/or **hands on head**. Each pose gets a grace period (default 5s) before a lapse becomes a violation; pose pass/fail is sampled into the sealed event log every 5s, and the verify report shows a per-pose green/red strip with % held. If pose verification is required and the model cannot load, the session is invalid — it can't be bypassed by blocking the model.
 
+**Every video session records with a burned-in overlay**: the recording is composited through a canvas (`canvas.captureStream()` + the raw mic track), so name, project, day number, date/time, challenge code, and live session/hold timers are drawn **into the pixels** of every frame — not metadata, not CSS. Capture is 1080p (long takes ~1.8 Mbps, short takes ~4 Mbps), and audio is raw: `echoCancellation`, `noiseSuppression`, and `autoGainControl` are all off, because speech-synthesis narration exists only as sound in the room and echo cancellation classifies it as speaker bleed and deletes it. A requirement can demand audible narration — a session that records silence is then invalid.
+
+**Challenge codes (hosted mode)**: before recording starts, the app requests a single-use code from the server, timestamped and burned into every frame. Footage carrying the code cannot predate its issuance, and the server refuses to let a second session reuse it — the anti-backdating anchor for the whole record. At seal registration the whole-file SHA-256 **and** the rolling chain final are attested to the server together.
+
 In both types, recording is **continuous — there is no pause**. While recording, the app live-monitors:
 
 - **Recording continuity** — mic/camera disconnection ends and invalidates the session

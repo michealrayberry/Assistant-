@@ -31,7 +31,7 @@ if (!fs.existsSync(SECRET_FILE)) fs.writeFileSync(SECRET_FILE, crypto.randomByte
 const SECRET = fs.readFileSync(SECRET_FILE, 'utf8').trim();
 
 const STATE_FILE = path.join(DATA, 'state.json');
-let state = { pairings: {}, seals: {}, packets: {} };
+let state = { pairings: {}, seals: {}, packets: {}, challenges: {} };
 if (fs.existsSync(STATE_FILE)) {
   try { state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); }
   catch (e) { console.error('Could not parse state.json, starting fresh:', e.message); }
@@ -119,6 +119,9 @@ function inboxFor(pairId) {
       sealCode: s.sealCode,
       valid: s.valid,
       reasons: s.reasons || [],
+      mediaSha256: s.mediaSha256 || null,
+      chainFinal: s.chainFinal || null,
+      challenge: s.challenge || null,
       registeredAt: s.registeredAt,
       status: 'seal-registered'
     };
@@ -223,6 +226,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // GET /api/challenge?code=participantCode
+    // Issues a short single-use code, timestamped by the server, that the app
+    // burns into every recorded frame — footage carrying it cannot predate it.
+    if (req.method === 'GET' && parts[1] === 'challenge') {
+      const auth = parseParticipantCode(url.searchParams.get('code'));
+      if (!auth) { err(res, 403, 'invalid pairing code'); return; }
+      const challenge = crypto.randomBytes(4).toString('hex').toUpperCase();
+      const issuedAt = new Date().toISOString();
+      state.challenges[challenge] = { pairId: auth.pairId, issuedAt, usedBy: null };
+      save();
+      send(res, 201, { challenge, issuedAt, receipt: hmac(`challenge|${challenge}|${issuedAt}`) });
+      return;
+    }
+
     // GET /api/requirement?code=participantCode
     if (req.method === 'GET' && parts[1] === 'requirement') {
       const auth = parseParticipantCode(url.searchParams.get('code'));
@@ -251,6 +268,19 @@ const server = http.createServer(async (req, res) => {
         }
         return;
       }
+      // optional attestation anchors: whole-file hash + rolling chunk-chain final
+      const hex64 = v => /^[a-f0-9]{64}$/.test(String(v || ''));
+      if (body.mediaSha256 !== undefined && !hex64(body.mediaSha256)) { err(res, 400, 'invalid mediaSha256'); return; }
+      if (body.chainFinal !== undefined && !hex64(body.chainFinal)) { err(res, 400, 'invalid chainFinal'); return; }
+      // optional challenge: must have been issued to this pairing and be unused
+      let challenge = null;
+      if (body.challenge !== undefined) {
+        const ch = state.challenges[String(body.challenge)];
+        if (!ch || ch.pairId !== auth.pairId) { err(res, 400, 'unknown challenge code'); return; }
+        if (ch.usedBy && ch.usedBy !== sid) { err(res, 409, 'challenge code already used by another session'); return; }
+        ch.usedBy = sid;
+        challenge = { code: String(body.challenge), issuedAt: ch.issuedAt };
+      }
       const registeredAt = new Date().toISOString();
       const receipt = hmac(`seal|${sid}|${body.seal}|${registeredAt}`);
       state.seals[sid] = {
@@ -259,6 +289,9 @@ const server = http.createServer(async (req, res) => {
         seal: body.seal,
         valid: !!body.valid,
         reasons: Array.isArray(body.reasons) ? body.reasons.slice(0, 20).map(r => String(r).slice(0, 300)) : [],
+        mediaSha256: hex64(body.mediaSha256) ? body.mediaSha256 : null,
+        chainFinal: hex64(body.chainFinal) ? body.chainFinal : null,
+        challenge,
         registeredAt,
         receipt
       };

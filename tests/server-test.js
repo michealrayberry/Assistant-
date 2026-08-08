@@ -75,10 +75,19 @@ const REQ = {
     r = await fetch(`${BASE}/api/packets/${sessionId}?code=${encodeURIComponent(pairing.participantCode)}`, { method: 'PUT', headers: { 'Content-Type': 'application/zip' }, body: zipBytes });
     check('upload before seal registration is rejected', r.status === 409);
 
-    // register seal
+    // challenge code issuance
+    r = await fetch(BASE + '/api/challenge?code=' + encodeURIComponent(pairing.participantCode));
+    const chal = await r.json();
+    check('challenge code issued', r.status === 201 && /^[A-F0-9]{8}$/.test(chal.challenge) && chal.issuedAt && /^[a-f0-9]{64}$/.test(chal.receipt));
+    r = await fetch(BASE + '/api/challenge?code=' + pairing.pairId + '.deadbeefdeadbeefdeadbeefdeadbeef');
+    check('challenge rejects wrong participant key', r.status === 403);
+
+    // register seal (with attestation anchors + challenge)
     const seal = crypto.randomBytes(32).toString('hex');
     const sealCode = seal.slice(0, 12).toUpperCase().replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3');
-    const sealBody = { code: pairing.participantCode, sessionId, sealCode, seal, valid: true, reasons: [] };
+    const mediaSha256 = crypto.randomBytes(32).toString('hex');
+    const chainFinal = crypto.randomBytes(32).toString('hex');
+    const sealBody = { code: pairing.participantCode, sessionId, sealCode, seal, valid: true, reasons: [], mediaSha256, chainFinal, challenge: chal.challenge };
     r = await fetch(BASE + '/api/seals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sealBody) });
     const sealResp = await r.json();
     check('seal registration', r.status === 201 && sealResp.registeredAt && /^[a-f0-9]{64}$/.test(sealResp.receipt));
@@ -88,6 +97,12 @@ const REQ = {
     check('seal re-registration is idempotent', r.status === 200 && (await r.json()).already === true);
     r = await fetch(BASE + '/api/seals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sealBody, seal: crypto.randomBytes(32).toString('hex') }) });
     check('conflicting seal for same session is rejected (immutable)', r.status === 409);
+
+    // challenge single-use: another session may not reuse it
+    r = await fetch(BASE + '/api/seals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sealBody, sessionId: 'other0-session', seal: crypto.randomBytes(32).toString('hex'), challenge: chal.challenge }) });
+    check('challenge reuse by another session is rejected', r.status === 409);
+    r = await fetch(BASE + '/api/seals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...sealBody, sessionId: 'other1-session', seal: crypto.randomBytes(32).toString('hex'), challenge: 'DEADBEEF' }) });
+    check('unknown challenge code is rejected', r.status === 400);
 
     // upload packet
     r = await fetch(`${BASE}/api/packets/${sessionId}?code=${encodeURIComponent(pairing.participantCode)}`, { method: 'PUT', headers: { 'Content-Type': 'application/zip', 'X-Filename': 'packet_test_VALID.zip' }, body: zipBytes });
@@ -103,7 +118,10 @@ const REQ = {
     // partner inbox
     r = await fetch(`${BASE}/api/pairings/${pairing.pairId}?key=${pairing.partnerKey}`);
     const inbox = await r.json();
-    check('partner inbox lists delivered packet', r.ok && inbox.inbox.length === 1 && inbox.inbox[0].status === 'delivered' && inbox.inbox[0].sealCode === sealCode && inbox.inbox[0].packetSha256 === localSha);
+    const mainItem = inbox.inbox.find(i => i.sessionId === sessionId);
+    check('partner inbox lists delivered packet', r.ok && mainItem && mainItem.status === 'delivered' && mainItem.sealCode === sealCode && mainItem.packetSha256 === localSha);
+    check('inbox carries attestation anchors and challenge',
+      mainItem && mainItem.mediaSha256 === mediaSha256 && mainItem.chainFinal === chainFinal && mainItem.challenge && mainItem.challenge.code === chal.challenge);
     r = await fetch(`${BASE}/api/pairings/${pairing.pairId}?key=wrongkey`);
     check('inbox rejects wrong partner key', r.status === 403);
 
@@ -126,7 +144,8 @@ const REQ = {
     check('server restarts', up2);
     r = await fetch(`${BASE}/api/pairings/${pairing.pairId}?key=${pairing.partnerKey}`);
     const inbox2 = await r.json();
-    check('pairings, seals and packets survive restart', r.ok && inbox2.inbox.length === 1 && inbox2.inbox[0].status === 'delivered');
+    const mainItem2 = inbox2.inbox.find(i => i.sessionId === sessionId);
+    check('pairings, seals and packets survive restart', r.ok && mainItem2 && mainItem2.status === 'delivered' && mainItem2.challenge.code === chal.challenge);
     server2.kill();
   } catch (e) {
     check('flow completed without exception', false, e.stack);

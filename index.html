@@ -6,25 +6,25 @@
 <title>Recording Assistant</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --panel: #181b23;
-    --panel-2: #1f2330;
-    --border: #2a2f3e;
-    --text: #e8eaf0;
-    --muted: #8a91a5;
-    --accent: #e0524d;
-    --accent-soft: rgba(224, 82, 77, 0.15);
-    --green: #3ecf8e;
-    --green-soft: rgba(62, 207, 142, 0.12);
-    --blue: #5b8def;
-    --amber: #e8b34b;
+    --bg: #FAFAF7;
+    --panel: #FFFFFF;
+    --panel-2: #F2F1EC;
+    --border: #E2E0D8;
+    --text: #1C1B18;
+    --muted: #6F6B61;
+    --accent: #B3261E;
+    --accent-soft: rgba(179, 38, 30, 0.08);
+    --green: #1E7F4F;
+    --green-soft: rgba(30, 127, 79, 0.10);
+    --blue: #2B5FB8;
+    --amber: #9A6B00;
     --radius: 14px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "IBM Plex Sans", "IBM Plex", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
   }
   .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 80px; }
@@ -32,7 +32,7 @@
   header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .logo {
     width: 40px; height: 40px; border-radius: 12px; flex: none;
-    background: linear-gradient(135deg, var(--accent), #b03a8c);
+    background: linear-gradient(135deg, var(--accent), #7A1713);
     display: flex; align-items: center; justify-content: center; font-size: 20px;
   }
   header h1 { font-size: 20px; font-weight: 700; }
@@ -85,7 +85,7 @@
   .req-detail { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 12px 0; font-size: 13.5px; line-height: 1.6; }
   .req-detail ol { margin: 6px 0 6px 20px; }
   .kv { color: var(--muted); }
-  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
 
   /* session active */
   .sess-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -128,7 +128,7 @@
     text-align: center; margin: 14px 0; padding: 14px; border-radius: 12px;
     background: var(--panel-2); border: 1px dashed var(--muted);
   }
-  .seal .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 26px; font-weight: 700; letter-spacing: 3px; }
+  .seal .code { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 26px; font-weight: 700; letter-spacing: 3px; }
   .seal .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
 
   /* verify */
@@ -172,7 +172,7 @@
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
     padding: 10px 18px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none;
-    box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10; max-width: 90vw; text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,.18); z-index: 10; max-width: 90vw; text-align: center;
   }
   .toast.show { opacity: 1; }
   .footer-note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.7; }
@@ -205,6 +205,11 @@
   <section id="tab-session">
     <div class="card" id="setupView">
       <h2>Start a session</h2>
+      <div class="row">
+        <div style="flex:2;min-width:150px"><label class="fld">Your name (burned into the video)</label><input type="text" id="idName" placeholder="Name"></div>
+        <div style="flex:2;min-width:150px"><label class="fld">Project</label><input type="text" id="idProject" placeholder="Project name"></div>
+        <div style="flex:1;min-width:80px"><label class="fld">Day #</label><input type="number" id="idDay" min="0" placeholder="1"></div>
+      </div>
       <label class="fld">Requirement</label>
       <select id="reqSelect"></select>
       <div class="req-detail" id="reqDetail"></div>
@@ -340,6 +345,7 @@
       <label class="chk"><input type="checkbox" id="nrRuleDark" checked> Invalidate if the camera is dark / obscured for more than <input type="number" id="nrDarkSec" value="10" min="3"> seconds (video only)</label>
       <label class="chk"><input type="checkbox" id="nrRuleSilence"> Invalidate if continuous silence exceeds <input type="number" id="nrSilenceSec" value="60" min="10"> seconds</label>
       <label class="chk"><input type="checkbox" id="nrRuleSteps" checked> Invalidate unless every step is marked done</label>
+      <label class="chk"><input type="checkbox" id="nrRuleAudible"> Invalidate if the session contains no audible narration/audio</label>
       <div class="spacer"></div>
       <button class="btn primary" id="btnSaveReq">Save requirement</button>
     </div>
@@ -751,6 +757,7 @@ function describeRules(r) {
   if (r.rules.invalidateOnHide) out.push(`App hidden > ${r.rules.maxHiddenSec}s → invalid`);
   if (r.media === 'video' && r.rules.invalidateOnDark) out.push(`Camera obscured > ${r.rules.darkMaxSec}s → invalid`);
   if (r.rules.invalidateOnSilence) out.push(`Silence > ${r.rules.maxSilenceSec}s → invalid`);
+  if (r.rules.requireAudibleAudio) out.push('Audible narration required → silent recording is invalid');
   if (r.rules.requireAllSteps) out.push('All steps must be marked done');
   out.push('Mic/camera disconnect → invalid · Early stop or abort → invalid');
   return out;
@@ -869,6 +876,7 @@ async function saveNewRequirement() {
       invalidateOnSilence: $('nrRuleSilence').checked,
       maxSilenceSec: Math.max(10, parseInt($('nrSilenceSec').value) || 60),
       requireAllSteps: $('nrRuleSteps').checked,
+      requireAudibleAudio: $('nrRuleAudible').checked,
       maxMoveTotalSec: Math.max(1, parseInt($('nrMoveTotal').value) || 15),
       maxMoveContinuousSec: Math.max(1, parseInt($('nrMoveCont').value) || 3),
       leavePositionSec: Math.max(2, parseInt($('nrLeave').value) || 5),
@@ -896,7 +904,8 @@ const VIOLATION_TEXT = {
   excessive_movement: 'Movement exceeded the allowed budget during the position hold',
   left_position: 'The locked position was left during the hold',
   pose_violation: 'A required pose was not maintained',
-  pose_unavailable: 'Pose verification was required but the pose model could not run'
+  pose_unavailable: 'Pose verification was required but the pose model could not run',
+  no_narration: 'The recording contains no audible narration/audio'
 };
 
 const POSE_LABELS = {
@@ -999,6 +1008,24 @@ async function startSession() {
 
   const id = uid();
   const mime = pickMime(req.media);
+  const identity = {
+    name: ($('idName').value || '').trim() || 'Unnamed',
+    project: ($('idProject').value || '').trim() || 'Recording Assistant',
+    day: Math.max(0, parseInt($('idDay').value, 10) || 0)
+  };
+  localStorage.setItem('ra_identity', JSON.stringify(identity));
+
+  // challenge code: issued by the server *before* recording starts, burned
+  // into every frame — proves the footage is not older than it claims
+  let challenge = null;
+  const pairing0 = participantPairing();
+  if (pairing0 && hostedBase() !== null) {
+    try {
+      challenge = await api('/api/challenge?code=' + encodeURIComponent(pairing0.code));
+    } catch (e) {
+      toast('Could not get a challenge code from the server — recording without one.');
+    }
+  }
   S = {
     id, req, mime,
     startWall: Date.now(),
@@ -1028,13 +1055,40 @@ async function startSession() {
     poseTrack: {},
     poseBusy: false,
     poseLastSample: 0,
+    identity,
+    challenge,
+    stopDraw: null,
+    compositeTracks: [],
+    audibleMs: 0,
     finalized: false,
     aborted: false
   };
   localStorage.setItem(ACTIVE_KEY, id);
 
-  // recorder
-  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  // preview must be live before the composite draw loop can sample it
+  if (req.media === 'video') {
+    const v = $('preview');
+    v.srcObject = stream;
+    v.classList.remove('hidden');
+    v.play().catch(() => {});
+  }
+
+  // Burned-in overlay: composite camera + overlay bar onto a canvas and
+  // record canvas.captureStream() with the raw mic track mixed in, so the
+  // identity/date/challenge/timer text lives in the pixels, not metadata.
+  let recordStream = stream;
+  if (req.media === 'video') {
+    const built = buildCompositeStream(stream);
+    recordStream = built.stream;
+    S.stopDraw = built.stop;
+    S.compositeTracks = built.stream.getVideoTracks();
+  }
+
+  // ~1.8 Mbps for long takes (memory on a 30-min session), ~4 Mbps for short
+  const bitrates = req.media === 'video'
+    ? { videoBitsPerSecond: req.minDurationSec >= 600 ? 1_800_000 : 4_000_000, audioBitsPerSecond: 128_000 }
+    : { audioBitsPerSecond: 128_000 };
+  const recorder = new MediaRecorder(recordStream, Object.assign(mime ? { mimeType: mime } : {}, bitrates));
   S.recorder = recorder;
   recorder.ondataavailable = e => {
     if (!e.data || !e.data.size) return;
@@ -1076,12 +1130,7 @@ async function startSession() {
 
   document.addEventListener('visibilitychange', onVisChange);
 
-  // preview
   if (req.media === 'video') {
-    const v = $('preview');
-    v.srcObject = stream;
-    v.classList.remove('hidden');
-    v.play().catch(() => {});
     $('pillCam').classList.remove('hidden');
   } else {
     $('preview').classList.add('hidden');
@@ -1092,6 +1141,8 @@ async function startSession() {
     requirementTitle: req.title,
     media: req.media,
     mime,
+    identity,
+    challenge: challenge ? { code: challenge.challenge, issuedAt: challenge.issuedAt } : null,
     userAgent: navigator.userAgent,
     platform: navigator.platform || ''
   });
@@ -1139,6 +1190,69 @@ async function startSession() {
     S.intervals.push(setInterval(runPoseCheck, 700));
   } else {
     $('poseStatus').classList.add('hidden');
+  }
+}
+
+/* ---- burned-in overlay compositor ---- */
+function buildCompositeStream(rawStream) {
+  const v = $('preview');
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280; canvas.height = 720; // resized to true camera dims on first frame
+  const ctx = canvas.getContext('2d');
+  const draw = () => {
+    if (v.videoWidth && (canvas.width !== v.videoWidth || canvas.height !== v.videoHeight)) {
+      canvas.width = v.videoWidth;
+      canvas.height = v.videoHeight;
+    }
+    if (v.videoWidth) ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+    else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    drawOverlayBar(ctx, canvas.width, canvas.height);
+  };
+  draw();
+  const timer = setInterval(draw, 33); // ~30fps; keeps painting (throttled) when tab is hidden
+  const cs = canvas.captureStream(30);
+  const stream = new MediaStream([...cs.getVideoTracks(), ...rawStream.getAudioTracks()]);
+  return { stream, stop: () => clearInterval(timer) };
+}
+
+function drawOverlayBar(ctx, w, h) {
+  if (!S) return;
+  const barH = Math.max(44, Math.round(h * 0.085));
+  const pad = Math.round(barH * 0.28);
+  const fontPx = Math.round(barH * 0.30);
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(0, h - barH, w, barH);
+
+  const id = S.identity || {};
+  const elapsed = fmtTime(sessionElapsedMs() / 1000);
+  const holdTxt = S.hold && S.hold.locked
+    ? ` · HOLD ${fmtTime((sessionElapsedMs() - S.hold.lockT) / 1000)}/${fmtTime(S.req.minDurationSec)}`
+    : '';
+  const now = new Date();
+  const line1 = `${id.name}  ·  ${id.project}${id.day ? '  ·  DAY ' + id.day : ''}`;
+  const line2 = `${now.toISOString().slice(0, 19).replace('T', ' ')}  ·  REC ${elapsed}${holdTxt}`;
+
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${fontPx}px 'IBM Plex Sans', 'IBM Plex Mono', Arial, sans-serif`;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(line1, pad, h - barH * 0.68);
+  ctx.font = `${fontPx}px 'IBM Plex Mono', Menlo, monospace`;
+  ctx.fillStyle = '#E8E8E8';
+  ctx.fillText(line2, pad, h - barH * 0.28);
+
+  // challenge code, right-aligned in the accent color — the anti-backdating anchor
+  const code = S.challenge ? S.challenge.challenge : 'NO CODE';
+  ctx.font = `700 ${Math.round(fontPx * 1.15)}px 'IBM Plex Mono', Menlo, monospace`;
+  ctx.fillStyle = S.challenge ? '#FF6A5E' : '#999999';
+  const cw = ctx.measureText(code).width;
+  ctx.fillText(code, w - cw - pad, h - barH * 0.5);
+
+  // recording dot, top-left, blinking
+  if (Math.floor(Date.now() / 700) % 2 === 0) {
+    ctx.fillStyle = '#B3261E';
+    ctx.beginPath();
+    ctx.arc(Math.round(w * 0.03), Math.round(w * 0.03), Math.max(5, Math.round(h * 0.012)), 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -1219,6 +1333,7 @@ function tickMonitor() {
     for (let i = 0; i < data.length; i++) { const d = (data[i] - 128) / 128; sum += d * d; }
     const rms = Math.sqrt(sum / data.length);
     $('meter').style.width = Math.min(100, Math.round(rms * 380)) + '%';
+    if (rms >= 0.01) S.audibleMs += 500;
     const silent = rms < 0.008;
     if (silent) {
       if (S.silentSince === null) S.silentSince = now;
@@ -1588,6 +1703,8 @@ async function finalizeSession() {
 
   // teardown
   sess.intervals.forEach(clearInterval);
+  if (sess.stopDraw) sess.stopDraw();
+  sess.compositeTracks.forEach(t => { try { t.stop(); } catch (e) {} });
   document.removeEventListener('visibilitychange', onVisChange);
   if (navigator.mediaDevices) navigator.mediaDevices.ondevicechange = null;
   sess.stream.getTracks().forEach(t => { t.onended = null; try { t.stop(); } catch (e) {} });
@@ -1602,6 +1719,15 @@ async function finalizeSession() {
   const endWall = Date.now();
   const durationMs = Math.round(performance.now() - sess.startPerf);
   const clockDriftMs = Math.round((endWall - sess.startWall) - durationMs);
+
+  // no-narration check: a session that expects audible audio but captured
+  // essentially none is invalid (the echo-cancellation failure mode)
+  if (sess.req.rules.requireAudibleAudio && sess.audibleMs < 3000) {
+    sess.events.push({
+      t: durationMs, wall: new Date(endWall).toISOString(),
+      type: 'violation', detail: { code: 'no_narration', audibleMs: sess.audibleMs }
+    });
+  }
   if (!sess.aborted) sess.events.push({ t: durationMs, wall: new Date(endWall).toISOString(), type: 'session_complete', detail: null });
 
   const verdict = computeVerdict(sess.events, sess.req, durationMs);
@@ -1635,6 +1761,10 @@ async function finalizeSession() {
     createdAt: new Date(endWall).toISOString(),
     requirement: sess.req,
     requirementHash: reqHash,
+    identity: sess.identity,
+    challenge: sess.challenge
+      ? { code: sess.challenge.challenge, issuedAt: sess.challenge.issuedAt, receipt: sess.challenge.receipt }
+      : null,
     timing: core.timing,
     media: {
       filename: mediaFile,
@@ -1642,7 +1772,8 @@ async function finalizeSession() {
       totalBytes: media.length,
       sha256: mediaHash,
       chunkSizes: sess.chunkSizes,
-      chunkChainFinal: hex(sess.chain)
+      chunkChainFinal: hex(sess.chain),
+      audibleMs: Math.round(sess.audibleMs)
     },
     snapshots: sess.snapshots.map(s => ({ file: s.file, t: s.t, sha256: s.sha256 })),
     events: sess.events,
@@ -1688,6 +1819,9 @@ Do not edit any file in this packet — any change will fail verification.`;
     reasons: verdict.reasons,
     sealCode,
     seal,
+    mediaSha256: mediaHash,
+    chainFinal: hex(sess.chain),
+    challengeCode: sess.challenge ? sess.challenge.challenge : null,
     size: zipBlob.size,
     durationMs,
     filename,
@@ -1867,10 +2001,17 @@ function renderVerifyReport(manifest, checks, mediaBytes, files) {
     if (!trustworthy) html += `<div class="hint" style="margin-top:6px">One or more integrity checks failed — treat this packet as unreliable.</div>`;
     else if (!v.valid) html += `<ul>${v.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`;
     html += '</div>';
+    const idInfo = manifest.identity
+      ? `${esc(manifest.identity.name)} · ${esc(manifest.identity.project)}${manifest.identity.day ? ' · Day ' + esc(String(manifest.identity.day)) : ''} — burned into the video frames<br>`
+      : '';
+    const chInfo = manifest.challenge
+      ? `<span class="kv mono">Challenge code ${esc(manifest.challenge.code)} issued ${esc(manifest.challenge.issuedAt)} — verify it appears in the frames and matches the server record</span><br>`
+      : `<span class="kv">No challenge code — this session cannot prove it is not older than claimed.</span><br>`;
     html += `<div class="req-detail">` +
-      `<strong>${esc(manifest.requirement.title)}</strong><br>` +
+      `<strong>${esc(manifest.requirement.title)}</strong><br>` + idInfo + chInfo +
       `<span class="kv">Session ${esc(manifest.sessionId)} · ${esc(manifest.timing.startedWall)} → ${esc(manifest.timing.endedWall)} · ` +
-      `duration ${fmtTime(manifest.timing.durationMs / 1000)} · clock drift ${manifest.timing.clockDriftMs} ms</span><br>` +
+      `duration ${fmtTime(manifest.timing.durationMs / 1000)} · clock drift ${manifest.timing.clockDriftMs} ms · ` +
+      `audible audio ${fmtTime((manifest.media.audibleMs || 0) / 1000)}</span><br>` +
       `<span class="kv mono">Requirement fingerprint: ${esc(manifest.requirementHash)}</span></div>`;
   }
 
@@ -2249,6 +2390,7 @@ async function loadInbox(entry, slot) {
         `<span class="name mono" style="font-size:12px">${esc(item.sessionId)}</span>` +
         `<span class="meta">${delivered ? fmtSize(item.size) : ''}</span></div>` +
         `<div class="meta" style="margin-top:6px">seal <span class="mono">${esc(item.sealCode)}</span>` +
+        (item.challenge ? ` · challenge <span class="mono">${esc(item.challenge.code)}</span>` : '') +
         (item.registeredAt ? ` · sealed ${esc(new Date(item.registeredAt).toLocaleString())}` : '') +
         (item.uploadedAt ? ` · delivered ${esc(new Date(item.uploadedAt).toLocaleString())}` : '') + `</div>` +
         (!item.valid && (item.reasons || []).length ? `<div class="meta" style="margin-top:4px">${item.reasons.map(esc).join(' · ')}</div>` : '') +
@@ -2305,7 +2447,14 @@ async function deliverPacket(rec, statusEl) {
       report(`Registering seal with server (attempt ${attempt})…`);
       const r1 = await api('/api/seals', {
         method: 'POST',
-        body: { code: pairing.code, sessionId: rec.id, sealCode: rec.sealCode, seal: rec.seal, valid: rec.valid, reasons: rec.reasons }
+        body: {
+          code: pairing.code, sessionId: rec.id, sealCode: rec.sealCode, seal: rec.seal,
+          valid: rec.valid, reasons: rec.reasons,
+          // attestation: both integrity anchors go on the record together
+          mediaSha256: rec.mediaSha256 || undefined,
+          chainFinal: rec.chainFinal || undefined,
+          challenge: rec.challengeCode || undefined
+        }
       });
       report('Seal registered · uploading packet…');
       const res = await fetch(`${hostedBase()}/api/packets/${encodeURIComponent(rec.id)}?code=${encodeURIComponent(pairing.code)}`, {
@@ -2352,6 +2501,14 @@ $('btnCreatePair').addEventListener('click', createPairing);
 (async function init() {
   db = await openDB();
   await seedRequirements();
+  try {
+    const saved = JSON.parse(localStorage.getItem('ra_identity') || 'null');
+    if (saved) {
+      $('idName').value = saved.name || '';
+      $('idProject').value = saved.project || '';
+      $('idDay').value = saved.day || '';
+    }
+  } catch (e) {}
   if (localStorage.getItem(ACTIVE_KEY)) {
     $('interruptNotice').classList.remove('hidden');
     localStorage.removeItem(ACTIVE_KEY);
