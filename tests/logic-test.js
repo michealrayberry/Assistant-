@@ -82,6 +82,25 @@ function check(name, ok, extra) {
   check('verdict: missing step invalid', computeVerdict([{ type: 'step_ack' }], req, 61000).valid === false);
   check('verdict: aborted invalid', computeVerdict([...okEvents, { type: 'session_aborted' }], req, 61000).valid === false);
 
+  // ---- 4b. position-hold verdicts ----
+  const holdReq = { sessionType: 'hold', minDurationSec: 60, steps: ['a'], rules: { requireAllSteps: true } };
+  const holdBase = [{ type: 'step_ack' }, { type: 'position_locked', t: 5000 }, { type: 'session_complete' }];
+  check('hold verdict: full hold valid', computeVerdict(holdBase, holdReq, 66000).valid === true);
+  check('hold verdict: never locked invalid', computeVerdict([{ type: 'step_ack' }], holdReq, 120000).valid === false);
+  check('hold verdict: hold counted from lock, not start',
+    computeVerdict(holdBase, holdReq, 64000).valid === false); // 64s total but only 59s after lock
+  check('hold verdict: excessive movement invalid',
+    computeVerdict([...holdBase, { type: 'violation', detail: { code: 'excessive_movement' } }], holdReq, 66000).valid === false);
+  check('hold verdict: left position invalid',
+    computeVerdict([...holdBase, { type: 'violation', detail: { code: 'left_position' } }], holdReq, 66000).valid === false);
+
+  // ---- 4c. motion math: mean-centered frame diff ----
+  const mk = (arr) => { const data = Float32Array.from(arr); const mean = arr.reduce((a, b) => a + b, 0) / arr.length; return { data, mean }; };
+  const fA = mk([10, 20, 30, 40]);
+  check('frameDiff: identical frames = 0', frameDiff(fA, mk([10, 20, 30, 40])) === 0);
+  check('frameDiff: global brightness shift ignored (exposure drift)', frameDiff(fA, mk([30, 40, 50, 60])) === 0);
+  check('frameDiff: structural change detected', frameDiff(fA, mk([40, 30, 20, 10])) > 10);
+
   // ---- 5. chain reproduction (simulates verify path) ----
   const sessionId = 'test-session';
   const chunks = [nodeCrypto.randomBytes(1000), nodeCrypto.randomBytes(2000), nodeCrypto.randomBytes(500)].map(b => new Uint8Array(b));

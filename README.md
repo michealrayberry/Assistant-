@@ -14,8 +14,20 @@ Both the participant **and** the partner use the same app (the partner uses the 
 ### 1. Requirements
 A requirement defines what a valid session is: video or audio, minimum duration, ordered instruction steps, and validity rules (max time hidden, max time camera obscured, silence limits, all-steps-required). The Accountability Partner can author a requirement in the app, **export** it as a JSON file, and send it to the participant to **import**. Every requirement has a SHA-256 fingerprint that appears in every packet, so the partner can confirm the right requirement was followed.
 
-### 2. Guided session (participant)
-The app walks the participant through each step in order. Recording is **continuous — there is no pause**. While recording, the app live-monitors:
+### 2. Sessions (participant)
+
+Two session types:
+
+**Guided task** — the app walks the participant through each step in order.
+
+**Position hold (e.g. corner time)** — after the steps, the participant gets into position on camera and presses **Lock position**. From the lock:
+- the **hold timer** starts (the minimum duration counts from the lock, not from recording start)
+- **movement checking**: frame-to-frame motion analysis with a configurable budget (total movement seconds and max continuous movement) — exceeding it invalidates
+- **position checking**: every frame is compared against the locked reference view; leaving the position beyond the allowed seconds invalidates. The comparison is mean-centered so lighting/exposure drift doesn't count as movement
+- motion and deviation scores are sampled into the tamper-evident event log every 5s, and the verify report renders them as a **movement/position timeline** with the violation thresholds drawn in
+- hashed snapshots are taken frequently (default every 15s) so the partner can visually confirm the pose in seconds
+
+In both types, recording is **continuous — there is no pause**. While recording, the app live-monitors:
 
 - **Recording continuity** — mic/camera disconnection ends and invalidates the session
 - **Screen presence** — hiding/backgrounding the app beyond the allowed window invalidates
@@ -105,6 +117,7 @@ The guarantees are precise but bounded:
 
 - **What it proves:** the delivered bytes are exactly what was captured, in one continuous take, under the logged conditions, with the logged violations — and that the packet wasn't rebuilt after sealing (offline: via the out-of-band seal code; hosted: via the server-witnessed, immutable seal record).
 - **What it can't prove:** who is on camera, or what's happening off-camera. A determined participant could point the camera at a screen. The requirement's steps (state name/date aloud, pan surroundings, one-take confirmation) are the mitigation — design them accordingly. Hosted mode makes discard-and-redo *visible* (abandoned seals and delays appear in the inbox) but the partner still needs to look.
+- **Movement/position checking is pixel-based, not skeletal.** It reliably detects motion, stillness, and leaving a locked position, but it is not ML pose estimation — it cannot verify a *specific* posture ("hands on head") automatically. The frequent hashed snapshots are the pose check: the partner can visually confirm the posture across the whole hold in a few seconds, and the snapshots are tamper-evident.
 - The server is a *timing witness and courier*, not an identity authority: anyone holding the pairing code can submit sessions. Share codes over a private channel.
 - It is not a substitute for professional court-ordered monitoring systems where those are required.
 

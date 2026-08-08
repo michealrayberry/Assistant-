@@ -223,12 +223,23 @@
           <span class="pill rec" id="pillRec">● REC</span>
           <span class="pill ok" id="pillScreen">Screen: visible</span>
           <span class="pill ok hidden" id="pillCam">Camera: OK</span>
+          <span class="pill ok hidden" id="pillStill">Still</span>
+          <span class="pill ok hidden" id="pillPos">In position</span>
           <span class="pill ok" id="pillMic">Mic: OK</span>
         </div>
       </div>
       <div class="hint" id="minDurHint" style="margin-top:6px"></div>
       <video id="preview" class="hidden" muted playsinline></video>
       <div class="meter-wrap"><div class="meter" id="meter"></div></div>
+      <div class="req-detail hidden" id="holdBox">
+        <div class="row" style="justify-content:space-between">
+          <div style="flex:1;min-width:200px">
+            <strong id="holdState">Get into position, then lock it to start the hold timer.</strong><br>
+            <span class="kv" id="holdStats">Position the camera so the full position is clearly visible.</span>
+          </div>
+          <button class="btn primary" id="btnLock">Lock position — start hold</button>
+        </div>
+      </div>
       <h3>Follow each step, then mark it done</h3>
       <div class="steps" id="stepsList"></div>
       <div class="row" style="margin-top:14px">
@@ -294,13 +305,26 @@
       <input type="text" id="nrTitle" placeholder="e.g. Daily medication check-in">
       <label class="fld">Description (shown to the participant before starting)</label>
       <input type="text" id="nrDesc" placeholder="What this session is for">
+      <label class="fld">Session type</label>
+      <select id="nrType">
+        <option value="guided">Guided task — follow steps on camera</option>
+        <option value="hold">Position hold (e.g. corner time) — lock a position, verify stillness</option>
+      </select>
       <label class="fld">Media</label>
       <select id="nrMedia">
         <option value="video">Video + audio</option>
         <option value="audio">Audio only</option>
       </select>
-      <label class="fld">Minimum duration (minutes)</label>
+      <label class="fld" id="nrMinLabel">Minimum duration (minutes)</label>
       <input type="number" id="nrMin" value="1" min="0.2" step="0.5">
+      <div id="holdFields" class="hidden">
+        <h3>Position-hold settings</h3>
+        <p class="hint">After the participant locks their position on camera, the app verifies they stay still and stay in the locked position for the whole hold. The hold timer only counts from the lock.</p>
+        <label class="chk">Allowed movement total <input type="number" id="nrMoveTotal" value="15" min="1"> seconds across the whole hold</label>
+        <label class="chk">Allowed continuous movement <input type="number" id="nrMoveCont" value="3" min="1"> seconds at a time</label>
+        <label class="chk">Leaving the locked position for more than <input type="number" id="nrLeave" value="5" min="2"> seconds → invalid</label>
+        <label class="chk">Hashed camera snapshot every <input type="number" id="nrSnapInt" value="15" min="5"> seconds (lets the partner visually confirm the pose)</label>
+      </div>
       <label class="fld">Steps — one per line, in order</label>
       <textarea id="nrSteps" rows="4" placeholder="State your name and today's date&#10;Show the item clearly on camera&#10;Complete the required action on camera"></textarea>
       <h3>Validity rules</h3>
@@ -653,11 +677,37 @@ const SAMPLE_REQ = {
   createdAt: '2026-01-01T00:00:00.000Z'
 };
 
+const SAMPLE_HOLD = {
+  id: 'sample-position-hold',
+  version: 1,
+  title: 'Sample: Position hold (corner time)',
+  description: 'Lock a position in full view of the camera and hold it — stillness and staying in position are verified continuously, with hashed snapshots for visual review.',
+  sessionType: 'hold',
+  media: 'video',
+  minDurationSec: 300,
+  steps: [
+    'State your full name and the assigned hold duration out loud',
+    'Position the camera so your entire position is clearly visible',
+    'Get into position and press "Lock position" to start the hold'
+  ],
+  rules: {
+    invalidateOnHide: true, maxHiddenSec: 15,
+    invalidateOnDark: true, darkMaxSec: 10,
+    invalidateOnSilence: false, maxSilenceSec: 60,
+    requireAllSteps: true,
+    maxMoveTotalSec: 15, maxMoveContinuousSec: 3,
+    leavePositionSec: 5, snapshotIntervalSec: 15
+  },
+  createdAt: '2026-01-01T00:00:00.000Z'
+};
+
 const requirementHash = req => sha256Hex(utf8(stableStringify(req)));
 
 function validateRequirement(r) {
   return r && typeof r === 'object' && typeof r.title === 'string' &&
     (r.media === 'video' || r.media === 'audio') &&
+    (!r.sessionType || r.sessionType === 'guided' || r.sessionType === 'hold') &&
+    !(r.sessionType === 'hold' && r.media !== 'video') &&
     typeof r.minDurationSec === 'number' && Array.isArray(r.steps) &&
     r.rules && typeof r.rules === 'object';
 }
@@ -670,12 +720,22 @@ async function getRequirements() {
 
 async function seedRequirements() {
   const list = await idb.all('requirements');
-  if (!list.length) await idb.put('requirements', SAMPLE_REQ);
+  if (!list.length) {
+    await idb.put('requirements', SAMPLE_REQ);
+    await idb.put('requirements', SAMPLE_HOLD);
+  }
 }
 
 function describeRules(r) {
   const out = [];
-  out.push(`Minimum duration: ${fmtTime(r.minDurationSec)}`);
+  if ((r.sessionType || 'guided') === 'hold') {
+    out.push(`Position hold: lock a position on camera, minimum hold ${fmtTime(r.minDurationSec)} (timer starts at lock)`);
+    out.push(`Movement budget ${r.rules.maxMoveTotalSec || 15}s total, max ${r.rules.maxMoveContinuousSec || 3}s continuous`);
+    out.push(`Leaving the locked position > ${r.rules.leavePositionSec || 5}s → invalid`);
+    out.push(`Snapshot every ${r.rules.snapshotIntervalSec || 15}s for visual pose review`);
+  } else {
+    out.push(`Minimum duration: ${fmtTime(r.minDurationSec)}`);
+  }
   out.push('Continuous recording — no pause allowed');
   if (r.rules.invalidateOnHide) out.push(`App hidden > ${r.rules.maxHiddenSec}s → invalid`);
   if (r.media === 'video' && r.rules.invalidateOnDark) out.push(`Camera obscured > ${r.rules.darkMaxSec}s → invalid`);
@@ -769,13 +829,16 @@ async function importRequirementFile(file) {
 async function saveNewRequirement() {
   const title = $('nrTitle').value.trim();
   const steps = $('nrSteps').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const sessionType = $('nrType').value;
   if (!title) { toast('Give the requirement a title.'); return; }
   if (!steps.length) { toast('Add at least one step.'); return; }
+  if (sessionType === 'hold' && $('nrMedia').value !== 'video') { toast('Position holds need video — the camera is what verifies the hold.'); return; }
   const req = {
     id: uid(),
     version: 1,
     title,
     description: $('nrDesc').value.trim(),
+    sessionType,
     media: $('nrMedia').value,
     minDurationSec: Math.max(10, Math.round(parseFloat($('nrMin').value || '1') * 60)),
     steps,
@@ -786,7 +849,11 @@ async function saveNewRequirement() {
       darkMaxSec: Math.max(3, parseInt($('nrDarkSec').value) || 10),
       invalidateOnSilence: $('nrRuleSilence').checked,
       maxSilenceSec: Math.max(10, parseInt($('nrSilenceSec').value) || 60),
-      requireAllSteps: $('nrRuleSteps').checked
+      requireAllSteps: $('nrRuleSteps').checked,
+      maxMoveTotalSec: Math.max(1, parseInt($('nrMoveTotal').value) || 15),
+      maxMoveContinuousSec: Math.max(1, parseInt($('nrMoveCont').value) || 3),
+      leavePositionSec: Math.max(2, parseInt($('nrLeave').value) || 5),
+      snapshotIntervalSec: Math.max(5, parseInt($('nrSnapInt').value) || (sessionType === 'hold' ? 15 : 30))
     },
     createdAt: new Date().toISOString()
   };
@@ -804,15 +871,27 @@ const VIOLATION_TEXT = {
   camera_obscured: 'Camera was dark or obscured longer than allowed',
   extended_silence: 'Continuous silence exceeded the allowed limit',
   track_ended: 'Microphone or camera disconnected during the session',
-  recorder_error: 'The recording engine reported an error mid-session'
+  recorder_error: 'The recording engine reported an error mid-session',
+  excessive_movement: 'Movement exceeded the allowed budget during the position hold',
+  left_position: 'The locked position was left during the hold'
 };
 
 function computeVerdict(events, req, durationMs) {
   const reasons = [];
   if (events.some(e => e.type === 'session_aborted'))
     reasons.push('Session was aborted before completion');
-  if (durationMs < req.minDurationSec * 1000)
+  if ((req.sessionType || 'guided') === 'hold') {
+    const lock = events.find(e => e.type === 'position_locked');
+    if (!lock) {
+      reasons.push('Position was never locked — the hold never started');
+    } else {
+      const holdMs = durationMs - lock.t;
+      if (holdMs < req.minDurationSec * 1000)
+        reasons.push(`Hold time (${fmtTime(holdMs / 1000)}) is shorter than the required minimum (${fmtTime(req.minDurationSec)})`);
+    }
+  } else if (durationMs < req.minDurationSec * 1000) {
     reasons.push(`Recording (${fmtTime(durationMs / 1000)}) is shorter than the required minimum (${fmtTime(req.minDurationSec)})`);
+  }
   const codes = [...new Set(events.filter(e => e.type === 'violation').map(e => e.detail && e.detail.code))];
   for (const c of codes) reasons.push(VIOLATION_TEXT[c] || ('Rule violation: ' + c));
   if (req.rules.requireAllSteps) {
@@ -898,6 +977,10 @@ async function startSession() {
     silentSince: null,
     snapCount: 0,
     lastSnapT: 0,
+    snapEveryMs: Math.max(5, req.rules.snapshotIntervalSec || 30) * 1000,
+    hold: req.sessionType === 'hold'
+      ? { locked: false, lockT: 0, ref: null, prev: null, moveMs: 0, moveStart: null, devStart: null, lastSample: 0 }
+      : null,
     finalized: false,
     aborted: false
   };
@@ -973,6 +1056,14 @@ async function startSession() {
   $('pillScreen').className = 'pill ok'; $('pillScreen').textContent = 'Screen: visible';
   $('pillMic').className = 'pill ok'; $('pillMic').textContent = 'Mic: OK';
   $('pillCam').className = 'pill ok' + (req.media === 'video' ? '' : ' hidden'); $('pillCam').textContent = 'Camera: OK';
+  $('pillStill').className = 'pill ok hidden'; $('pillStill').textContent = 'Still';
+  $('pillPos').className = 'pill ok hidden'; $('pillPos').textContent = 'In position';
+  $('holdBox').classList.toggle('hidden', !S.hold);
+  $('btnLock').classList.toggle('hidden', !S.hold);
+  if (S.hold) {
+    $('holdState').textContent = 'Get into position, then lock it to start the hold timer.';
+    $('holdStats').textContent = 'Position the camera so the full position is clearly visible. Recording has already started.';
+  }
   renderSteps();
   updateCompleteBtn();
 
@@ -1018,17 +1109,30 @@ function tickTimer() {
   updateCompleteBtn();
 }
 
+function remainingSec() {
+  if (!S) return 0;
+  if (S.hold) {
+    if (!S.hold.locked) return S.req.minDurationSec;
+    return S.req.minDurationSec - (sessionElapsedMs() - S.hold.lockT) / 1000;
+  }
+  return S.req.minDurationSec - sessionElapsedMs() / 1000;
+}
+
 function updateCompleteBtn() {
   if (!S) return;
-  const remain = S.req.minDurationSec - sessionElapsedMs() / 1000;
+  const remain = remainingSec();
   const stepsLeft = S.req.steps.length - S.stepsDone;
   const b = $('btnComplete');
-  if (remain > 0) {
-    b.textContent = `Complete session (min. duration in ${fmtTime(remain)})`;
-    $('minDurHint').textContent = `Required minimum: ${fmtTime(S.req.minDurationSec)} continuous.` + (stepsLeft ? ` ${stepsLeft} step(s) remaining.` : '');
+  const kind = S.hold ? 'hold' : 'duration';
+  if (S.hold && !S.hold.locked) {
+    b.textContent = 'Complete session (position not locked)';
+    $('minDurHint').textContent = `Lock your position to start the hold. Required hold: ${fmtTime(S.req.minDurationSec)}.` + (stepsLeft ? ` ${stepsLeft} step(s) remaining.` : '');
+  } else if (remain > 0) {
+    b.textContent = `Complete session (min. ${kind} in ${fmtTime(remain)})`;
+    $('minDurHint').textContent = `Required minimum ${kind}: ${fmtTime(S.req.minDurationSec)} continuous.` + (stepsLeft ? ` ${stepsLeft} step(s) remaining.` : '');
   } else {
     b.textContent = stepsLeft ? `Complete session (${stepsLeft} step(s) not done)` : 'Complete session ✓';
-    $('minDurHint').textContent = stepsLeft ? `${stepsLeft} step(s) remaining.` : 'Minimum duration reached — complete when all steps are done.';
+    $('minDurHint').textContent = stepsLeft ? `${stepsLeft} step(s) remaining.` : `Minimum ${kind} reached — complete when all steps are done.`;
   }
 }
 
@@ -1061,21 +1165,12 @@ function tickMonitor() {
     }
   }
 
-  // camera darkness + periodic snapshots
+  // camera darkness, movement/position monitoring, periodic snapshots
   if (S.req.media === 'video') {
     const v = $('preview');
     if (v.videoWidth > 0) {
-      const c = document.createElement('canvas');
-      c.width = 48; c.height = 36;
-      const ctx = c.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(v, 0, 0, c.width, c.height);
-      let luma = 0;
-      try {
-        const img = ctx.getImageData(0, 0, c.width, c.height).data;
-        for (let i = 0; i < img.length; i += 4) luma += 0.299 * img[i] + 0.587 * img[i+1] + 0.114 * img[i+2];
-        luma /= img.length / 4;
-      } catch (e) { luma = 255; }
-      const dark = luma < 14;
+      const g = grayFromVideo(v);
+      const dark = g.mean < 14;
       if (dark) {
         if (S.darkSince === null) { S.darkSince = now; logEvent('camera_dark_start'); }
         const dur = (now - S.darkSince) / 1000;
@@ -1085,8 +1180,54 @@ function tickMonitor() {
         if (S.darkSince !== null) { logEvent('camera_dark_end', { seconds: Math.round((now - S.darkSince) / 1000) }); S.darkSince = null; }
         $('pillCam').className = 'pill ok'; $('pillCam').textContent = 'Camera: OK';
       }
-      // snapshot every 30s
-      if (now - S.lastSnapT > 30000) {
+
+      // position hold: stillness + locked-position deviation
+      const h = S.hold;
+      if (h && h.locked && !dark) {
+        const motion = h.prev ? frameDiff(g, h.prev) : 0;
+        const dev = frameDiff(g, h.ref);
+        const moving = motion > MOVE_THRESHOLD;
+        const out = dev > DEV_THRESHOLD;
+
+        if (moving) {
+          h.moveMs += 500;
+          if (h.moveStart === null) { h.moveStart = now; logEvent('movement_start'); }
+        } else if (h.moveStart !== null) {
+          logEvent('movement_end', { seconds: Math.round((now - h.moveStart) / 1000) });
+          h.moveStart = null;
+        }
+        const contSec = h.moveStart !== null ? (now - h.moveStart) / 1000 : 0;
+        if (contSec > (rules.maxMoveContinuousSec || 3))
+          logViolation('excessive_movement', { kind: 'continuous', seconds: Math.round(contSec) });
+        if (h.moveMs / 1000 > (rules.maxMoveTotalSec || 10))
+          logViolation('excessive_movement', { kind: 'total', seconds: Math.round(h.moveMs / 1000) });
+
+        if (out) {
+          if (h.devStart === null) { h.devStart = now; logEvent('position_deviation_start', { dev: Math.round(dev) }); }
+          if ((now - h.devStart) / 1000 > (rules.leavePositionSec || 5))
+            logViolation('left_position', { seconds: Math.round((now - h.devStart) / 1000) });
+        } else if (h.devStart !== null) {
+          logEvent('position_deviation_end', { seconds: Math.round((now - h.devStart) / 1000) });
+          h.devStart = null;
+        }
+
+        // sampled scores go into the tamper-evident event log → verify-side timeline
+        if (now - h.lastSample > 5000) {
+          h.lastSample = now;
+          logEvent('motion_sample', { m: Math.round(motion * 10) / 10, d: Math.round(dev * 10) / 10 });
+        }
+
+        $('pillStill').className = moving ? 'pill bad' : 'pill ok';
+        $('pillStill').textContent = moving ? 'MOVING' : 'Still';
+        $('pillPos').className = out ? 'pill bad' : 'pill ok';
+        $('pillPos').textContent = out ? 'OUT OF POSITION' : 'In position';
+        const holdSec = (sessionElapsedMs() - h.lockT) / 1000;
+        $('holdStats').textContent =
+          `Hold ${fmtTime(holdSec)} of ${fmtTime(S.req.minDurationSec)} · movement used ${Math.round(h.moveMs / 1000)}s of ${rules.maxMoveTotalSec || 10}s allowed`;
+      }
+      if (h) h.prev = g;
+
+      if (now - S.lastSnapT > S.snapEveryMs) {
         S.lastSnapT = now;
         takeSnapshot(v);
       }
@@ -1098,6 +1239,57 @@ function tickMonitor() {
     const dur = (now - S.hiddenSince) / 1000;
     if (dur > rules.maxHiddenSec) logViolation('screen_hidden', { seconds: Math.round(dur) });
   }
+}
+
+/* ---- position-hold motion analysis (48x36 grayscale, mean-centered
+   so global exposure/lighting drift doesn't read as movement) ---- */
+const MOVE_THRESHOLD = 7;   // frame-to-frame mean abs diff → "moving"
+const DEV_THRESHOLD = 18;   // diff vs locked reference → "out of position"
+
+function grayFromVideo(v) {
+  const c = document.createElement('canvas');
+  c.width = 48; c.height = 36;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(v, 0, 0, c.width, c.height);
+  const out = new Float32Array(48 * 36);
+  let mean = 0;
+  try {
+    const d = ctx.getImageData(0, 0, 48, 36).data;
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      out[j] = g;
+      mean += g;
+    }
+    mean /= out.length;
+  } catch (e) { mean = 255; }
+  return { data: out, mean };
+}
+
+function frameDiff(a, b) {
+  let s = 0;
+  for (let i = 0; i < a.data.length; i++)
+    s += Math.abs((a.data[i] - a.mean) - (b.data[i] - b.mean));
+  return s / a.data.length;
+}
+
+function lockPosition() {
+  if (!S || S.finalized || !S.hold || S.hold.locked) return;
+  const v = $('preview');
+  if (!v.videoWidth) { toast('Camera is not ready yet — wait a moment.'); return; }
+  const h = S.hold;
+  h.locked = true;
+  h.lockT = Math.round(sessionElapsedMs());
+  h.ref = grayFromVideo(v);
+  h.prev = h.ref;
+  h.lastSample = performance.now();
+  logEvent('position_locked');
+  takeSnapshot(v); // the reference view, hashed into the packet
+  $('btnLock').classList.add('hidden');
+  $('pillStill').classList.remove('hidden');
+  $('pillPos').classList.remove('hidden');
+  $('holdState').textContent = 'Hold in progress — stay still, stay in position.';
+  updateCompleteBtn();
+  toast('Position locked — hold timer started.');
 }
 
 function takeSnapshot(v) {
@@ -1155,11 +1347,13 @@ function stopRecorder() {
 
 function completeSession() {
   if (!S || S.finalized) return;
-  const remain = S.req.minDurationSec - sessionElapsedMs() / 1000;
+  const remain = remainingSec();
   const stepsLeft = S.req.steps.length - S.stepsDone;
-  if (remain > 0 || (S.req.rules.requireAllSteps && stepsLeft > 0)) {
+  const neverLocked = S.hold && !S.hold.locked;
+  if (remain > 0 || neverLocked || (S.req.rules.requireAllSteps && stepsLeft > 0)) {
     const why = [];
-    if (remain > 0) why.push(`the minimum duration has ${fmtTime(remain)} remaining`);
+    if (neverLocked) why.push('the position was never locked');
+    else if (remain > 0) why.push(`the minimum ${S.hold ? 'hold' : 'duration'} has ${fmtTime(remain)} remaining`);
     if (stepsLeft > 0) why.push(`${stepsLeft} step(s) are not marked done`);
     if (!confirm(`Completing now will make this session INVALID because ${why.join(' and ')}. Complete anyway?`)) return;
   }
@@ -1502,7 +1696,7 @@ function renderVerifyReport(manifest, checks, mediaBytes, files) {
 
     if ((manifest.snapshots || []).length && files) {
       const h = document.createElement('h3');
-      h.textContent = 'Camera snapshots (every 30s)';
+      h.textContent = `Camera snapshots (every ${(manifest.requirement.rules || {}).snapshotIntervalSec || 30}s) — visual pose review`;
       const g = document.createElement('div');
       g.className = 'snaps';
       for (const s of manifest.snapshots) {
@@ -1515,6 +1709,35 @@ function renderVerifyReport(manifest, checks, mediaBytes, files) {
       mediaCard.append(h, g);
     }
     report.appendChild(mediaCard);
+
+    // movement/position timeline for hold sessions
+    const samples = manifest.events.filter(e => e.type === 'motion_sample' && e.detail);
+    if (samples.length > 1) {
+      const mvCard = document.createElement('div');
+      mvCard.className = 'card';
+      const lock = manifest.events.find(e => e.type === 'position_locked');
+      const holdInfo = lock
+        ? `Position locked at ${fmtTime(lock.t / 1000)} · hold length ${fmtTime((manifest.timing.durationMs - lock.t) / 1000)}`
+        : 'Position was never locked';
+      const W = 600, H = 110, PAD = 8;
+      const t0 = samples[0].t, t1 = samples[samples.length - 1].t || t0 + 1;
+      const x = t => PAD + (W - 2 * PAD) * (t - t0) / Math.max(1, t1 - t0);
+      const maxY = Math.max(30, ...samples.map(s => Math.max(s.detail.m || 0, s.detail.d || 0)));
+      const y = v => H - PAD - (H - 2 * PAD) * Math.min(v, maxY) / maxY;
+      const line = key => samples.map(s => `${x(s.t).toFixed(1)},${y(s.detail[key] || 0).toFixed(1)}`).join(' ');
+      mvCard.innerHTML =
+        `<h2>Hold — movement &amp; position timeline</h2>` +
+        `<p class="hint">${esc(holdInfo)}. Sampled every 5s into the tamper-evident event log. ` +
+        `<span style="color:var(--accent)">■</span> movement (frame-to-frame) · ` +
+        `<span style="color:var(--blue)">■</span> deviation from locked position. Dashed lines are the violation thresholds.</p>` +
+        `<svg viewBox="0 0 ${W} ${H}" style="width:100%;background:var(--panel-2);border-radius:10px;margin-top:8px" preserveAspectRatio="none">` +
+        `<line x1="${PAD}" y1="${y(MOVE_THRESHOLD)}" x2="${W - PAD}" y2="${y(MOVE_THRESHOLD)}" stroke="var(--accent)" stroke-dasharray="4 4" stroke-width="0.7" opacity="0.5"/>` +
+        `<line x1="${PAD}" y1="${y(DEV_THRESHOLD)}" x2="${W - PAD}" y2="${y(DEV_THRESHOLD)}" stroke="var(--blue)" stroke-dasharray="4 4" stroke-width="0.7" opacity="0.5"/>` +
+        `<polyline points="${line('m')}" fill="none" stroke="var(--accent)" stroke-width="1.4"/>` +
+        `<polyline points="${line('d')}" fill="none" stroke="var(--blue)" stroke-width="1.4"/>` +
+        `</svg>`;
+      report.appendChild(mvCard);
+    }
 
     // event timeline
     const evCard = document.createElement('div');
@@ -1606,6 +1829,13 @@ $('reqSelect').addEventListener('change', renderReqDetail);
 $('btnStart').addEventListener('click', startSession);
 $('btnComplete').addEventListener('click', completeSession);
 $('btnAbort').addEventListener('click', abortSession);
+$('btnLock').addEventListener('click', lockPosition);
+$('nrType').addEventListener('change', () => {
+  const hold = $('nrType').value === 'hold';
+  $('holdFields').classList.toggle('hidden', !hold);
+  $('nrMinLabel').textContent = hold ? 'Minimum hold duration (minutes, counted from position lock)' : 'Minimum duration (minutes)';
+  if (hold) $('nrMedia').value = 'video';
+});
 $('btnNewSession').addEventListener('click', async () => {
   $('resultView').classList.add('hidden');
   $('setupView').classList.remove('hidden');
